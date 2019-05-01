@@ -1,8 +1,1 @@
-# MindgoIncrementalFramework
-基本用法：
-
-from mindform import MindForm
-
-from mindform import models
-
-mf = MindForm()
+基于mindgo的策略实现框架
