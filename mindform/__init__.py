@@ -4,7 +4,12 @@ from collections import OrderedDict, Sequence
 
 import pandas as pd
 
-from mindgo import log, history
+LOCAL = False
+try:
+    from mindgo import log, history
+    LOCAL = True
+except Exception:
+    pass
 
 class BaseMeta(object):
     k_data_fields = ['open', 'high', 'low', 'close', 'high_limit', 'low_limit', 'factor', 'avg_price', 'prev_close',
@@ -426,7 +431,7 @@ class Styles(object):
             key = style.__name__ + '_' + stock
         self._style_data[key] = data
 
-    def _run_style(self):
+    def run(self):
         """
         收盘逐个个股、按照依赖关系逐个计算形态计算数据
         :return:
@@ -493,8 +498,7 @@ class Styles(object):
         之后转换数据，将当天数据置为前一天数据，为下一天计算做准备
         :return:
         """
-        self._run_style()
-        pass
+        self.run()
 
 
 class XX(Style):
@@ -526,13 +530,30 @@ class B(Style):
         print(self.a.x.pharse.p)
         print(self.x.pharse.p)
 
-s = Styles('000001', ['600086'])
-s.regist([B, A, XX])
-while True:
-    s.after_trading_end(1, 1)
+if LOCAL:
+    s = Styles('000001', ['600086'])
+    s.regist([B, A, XX])
+    while True:
+        s.after_trading_end(1, 1)
 
-a = 绝对走势()
-a.__td_fields__["pharse"] = 1
-a.__yt_fields__["pharse"] = 2
-print(a.pharse)
-print(a.pre_pharse)
+def init(account):
+    # 设置要交易的证券(600519.SH 贵州茅台)
+    account.security = '600519.SH'
+    account.styles = Styles('000001.SH', ['600519.SH'])
+    account.styles.regist([B, A, XX])
+
+
+def before_trading(account):
+    pass
+
+
+def after_trading(account):
+    log.info("after_trading_end:{}".format(get_datetime()))
+    account.styles.run()
+    log.info(account.styles.get_stock_style_data('600519.SH', 'B'))
+
+
+# 设置买卖条件，每个交易频率（日/分钟/tick）调用一次
+def handle_data(account, data):
+    # 获取证券过去20日的收盘价数据
+    pass
