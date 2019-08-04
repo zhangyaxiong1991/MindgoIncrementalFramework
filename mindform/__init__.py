@@ -22,27 +22,44 @@ class Field(object):
         clone = self.__class__()
         return clone
 
-    def _to_json(self):
-        pass
-
-    def _from_json(self, s):
-        pass
-
-    def _refresh_data(self, all_history_data):
+    def handle_rights(self, all_history_data):
+        """
+        处理复权
+        :param all_history_data:
+        :return:
+        """
         pass
 
 
 class PointField(Field):
-    pass
+    def __init__(self):
+        self.index = None
+        self.date = None
+        self.price = None
+
+    def clone(self):
+        clone = super().clone()
+        clone.index = self.index
+        clone.date = self.date
+        clone.price = self.price
+
+    def set_point(self, style, price):
+        """
+        :param price: 复权价
+        :return:
+        """
+        self.index = style.index
+        self.date = style.td
+        self.price = price
 
 
 class PharseField(Field):
     def __init__(self, pharse, first_pharse=None):
         self.pharses = pharse
-        self.p = first_pharse
+        self.v = first_pharse
 
     def clone(self):
-        clone = self.__class__(self.pharses, self.p)
+        clone = self.__class__(self.pharses, self.v)
         return clone
 
 class DateField(Field):
@@ -137,8 +154,11 @@ class Style(BaseStyle, metaclass=StyleCreator):
     __catch_data_num__ = 2
     __catch_data__ = None
 
-    stock = None
+    stock = None  # 所属个股代码
     styles = None
+    index = None  # 个股第几天
+    td = None     # 当天日期
+    yt = None     # 前一天日期
 
     def run(self):
         for field in self.__fields__:
@@ -476,7 +496,7 @@ class Styles(object):
                     stock_style_data.switch_fields()
                     stock_style_data.run()
 
-    def before_trading_start(self, account, data):
+    def before_trading_start(self, account):
         """
         在开盘前调用，请求所有的个股的状态，判断是否需要除权，
         如果需要：则请求该个股的所有历史数据，遍历该个股下的所有形态的所有字段，更新值
@@ -492,7 +512,7 @@ class Styles(object):
         """
         pass
 
-    def after_trading_end(self, account, data):
+    def after_trading_end(self, account):
         """
         收盘后请求所有关注个股的日线数据，驱动需要在该级别运行的形态
         之后转换数据，将当天数据置为前一天数据，为下一天计算做准备
@@ -508,9 +528,10 @@ class XX(Style):
     }
     pharse = PharseField(pharse_chocie, PHARSE_1)
     def parse_pharse(self):
-        self.pharse.p += 1
+        self.pharse.v += 1
     def init_first_row(self):
-        self.pharse.p = 1
+        self.pharse.v = 1
+
 
 class A(Style):
     x = XX()
@@ -520,6 +541,7 @@ class A(Style):
     class Meta:
         k_data_fields = ['open', 'close']
 
+
 class B(Style):
     a = A()
     x = XX()
@@ -527,14 +549,16 @@ class B(Style):
         pass
 
     def parse(self):
-        print(self.a.x.pharse.p)
-        print(self.x.pharse.p)
+        print(self.a.x.pharse.v)
+        print(self.x.pharse.v)
+
 
 if LOCAL:
     s = Styles('000001', ['600086'])
     s.regist([B, A, XX])
     while True:
-        s.after_trading_end(1, 1)
+        s.after_trading_end(1)
+
 
 def init(account):
     # 设置要交易的证券(600519.SH 贵州茅台)
@@ -549,7 +573,7 @@ def before_trading(account):
 
 def after_trading(account):
     log.info("after_trading_end:{}".format(get_datetime()))
-    account.styles.run()
+    account.styles.after_trading_end(account)
     log.info(account.styles.get_stock_style_data('600519.SH', 'B'))
 
 
