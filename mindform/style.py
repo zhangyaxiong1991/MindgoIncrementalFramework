@@ -35,15 +35,18 @@ class Styles(object):
         self._catch_data = {}
 
         self.fileds = ['close', 'open', 'low', 'high']
+        
+        self.td = None
+        self.last_two_days_data = None
+        self.last_two_days_data_refresh_date = None
+        self.all_stocks = None
+        self.all_stocks_refresh_date = None
+        self.__catch_data_num__ = None
 
-    def _get_all_history_data(self, stock, now):
+    def get_stock_all_history_data(self, stock, now=None):
         start_date = self.start_date
-
-        catched_data = self._catch_data.get(stock)
-        if catched_data  is not None:
-            catch_start = catched_data.index[0]
-            start_date = min(catch_start, self.start_date)
-
+        if now is None:
+            now = self.td
         data = get_price([stock], start_date.strftime("%Y%m%d"), now.strftime("%Y%m%d"), '1d', self.fileds)
         return data.get(stock)
 
@@ -94,99 +97,127 @@ class Styles(object):
             if style.__catch_data_num__ > self.__catch_data_num__:
                 self.__catch_data_num__ = style.__catch_data_num__
 
-    def _handle_rights(self, stock, now):
-        all_history_data = self._get_all_history_data(stock, now)
-        catch_k_data = self._catch_data[stock]
-        new_catch_k_data = all_history_data.loc[catch_k_data.index[0], :]
-        self._catch_data[stock] = new_catch_k_data
-
-        stock_data = self._style_data[stock]
-        for style_name, style in self._styles.items():
-            # 刷新各字段的数据
-            style_data = stock_data[style_name]
-            for field_name, field_json_data in style_data.items():
-                field = style.__fields__[field_name]
-                field.from_json(field_json_data)
-                field._handle_rights(all_history_data)
-                style_data[field_name] = field.to_json
-
     def get_all_stocks(self):
         """
         获取所有关注的个股
         :return:
         """
-        try:
-            return self._follow_stocks()
-        except TypeError:
-            return self._follow_stocks
+        if self.all_stocks_refresh_date is None or self.all_stocks_refresh_date == self.td:
+            try:
+                self.all_stocks = self._follow_stocks()
+            except TypeError:
+                self.all_stocks =  self._follow_stocks
+            self.all_stocks_refresh_date = self.td
+        return self.all_stocks
 
-    def _handle_rights(self, stock, now):
-        all_history_data = self._get_all_history_data(stock, now)
-        catch_k_data = self._catch_data[stock]
-        new_catch_k_data = all_history_data.loc[catch_k_data.index, :]
-        self._catch_data[stock] = new_catch_k_data
-
+    def _handle_rights(self, stock, all_history_data):
         for style_name, style in self._styles.items():
-            style.handle_rights()
+            style.handle_rights(stock, all_history_data)
 
-    def _refresh_stock_data(self, stock, last_two_days_data, now):
+    def set_td_date(self):
         """
-        更新个股相关数据，增量更新
-        :param stock:
-        :param now:
+        设置当天时间
         :return:
         """
-        if stock not in self._catch_data:
-            self._catch_data[stock] = last_two_days_data
+        td = get_datetime()
+        if self.td == td:
+            return
+        if self.td is None:
+            self.td = td
+            self.yt = None
         else:
-            catched_k_data = self._catch_data[stock]
-            if not last_two_days_data.iloc[0]['close'] == catched_k_data.iloc[-1]['close']:
-                self._handle_rights(stock, now)
-                catched_k_data = self._catch_data[stock] # 除权后数据已更新，需要重新获取
-            if len(catched_k_data) >= self.__catch_data_num__:
-                catched_k_data.drop(catched_k_data.index[0:1], inplace=True)
-                catched_k_data = catched_k_data.append(last_two_days_data.iloc[1])
+            self.yt = self.td
+            self.td = td
+
+
+    def down_load_last_two_days_data(self):
+        """
+        下载最近两天的数据,检查是否需要复权，如果需要则触发复权的逻辑，并且更新缓存的个股数据
+        :return:
+        """
+        if self.last_two_days_data_refresh_date is None or not self.last_two_days_data_refresh_date == self.td:
+            self.last_two_days_data_refresh_date = self.td
+            if self.start_date > self.td:
+                # 如果还没有超过起始时间，则相当于没有任何数据
+                self.last_two_days_data = {}
+                self._catch_data = {}
+            else:
+                all_stocks = self.get_all_stocks()
+                if self.start_date == self.td:
+                    # 如果正好是起始时间，则只请求一天的数据
+                    self.last_two_days_data = get_candle_stick(all_stocks + [self._driver], self.td.strftime("%Y%m%d"),
+                                                               fre_step="1d", fields=self.fileds,
+                                                               skip_paused=True, bar_count=1)
+                    self._catch_data = self.last_two_days_data
+                else:
+                    self.last_two_days_data = get_candle_stick(all_stocks + [self._driver], self.td.strftime("%Y%m%d"),
+                                                               fre_step="1d", fields=self.fileds,
+                                                               skip_paused=True, bar_count=2)
+                    for stock, last_two_days_data in self.last_two_days_data.items():
+                        if not self.td in last_two_days_data:
+                            # 当天停盘
+                            continue
+                        # 剔除掉小于起始时间的数据
+                        last_two_days_data.drop([i for i in last_two_days_data if i < self.start_date], inplace=True)
+                        if len(last_two_days_data) == 1:
+                            self._catch_data[stock] = last_two_days_data
+                        else:
+                            if stock not in self._catch_data:
+                                raise ValueError("data not catched: {}".format(stock))
+                            if not self._catch_data[stock].index[-1] == last_two_days_data.index[0]:
+                                raise ValueError("data not right, _catch_data last date:{} yt date: {}"
+                                                 .format(self._catch_data[stock].index[-1], last_two_days_data.index[0]))
+                            if not self._catch_data[stock].iloc[-1]["close"] == last_two_days_data.iloc[0]["close"]:
+                                # 需要复权，先拿着所有历史数据去对让形态数据复权，然后裁剪后赋值给缓存数据
+                                stock_all_history_data = self.get_stock_all_history_data(stock)
+                                missed_date = set(self._catch_data[stock].index) - set(stock_all_history_data.index)
+                                if missed_date:
+                                    raise ValueError("some data missed when get all history data stock:{} missed date:{}"
+                                                     .format(stock, missed_date))
+                                self._handle_rights(stock, stock_all_history_data)
+                                catch_data_first_data = self._catch_data[stock].index[0]
+                                stock_all_history_data.drop([i for i in stock_all_history_data.index if i < catch_data_first_data], inplace=True)
+                                self._catch_data[stock] = stock_all_history_data
+                            else:
+                                self._catch_data[stock] = self._catch_data[stock].append(last_two_days_data.iloc[1])
+                    for stock, stock_catched_data in self._catch_data:
+                        if len(stock_catched_data) > self.__catch_data_num__:
+                            # 缓存数据超长时删除第一行即可
+                            stock_catched_data.drop(stock_catched_data.index[0], inplace=True)
+
+    def get_stock_last_two_days_date(self, stock):
+        """
+        获取个股最近两天的数据
+        :param stock:
+        :return:
+        """
+        self.down_load_last_two_days_data()
+        return self.last_two_days_data.get(stock, None)
 
     def run(self):
         """
         收盘逐个个股、按照依赖关系逐个计算形态计算数据
         :return:
         """
-        all_stocks = self.get_all_stocks()
+        if self.start_date > get_datetime():
+            return
+        self.set_td_date()
 
-        # 通过驱动个股获取当天，前一天日期，且认为驱动个股不会停盘
-        all_stocks_data = get_candle_stick(all_stocks + [self._driver], get_datetime().strftime("%Y%m%d"),
-                                           fre_step="1d", fields=self.fileds,
-                                           skip_paused=True, bar_count=2)
-        self.yt = all_stocks_data[self._driver].index[0]
-        self.td = all_stocks_data[self._driver].index[1]
         log.info("开始计算{}形态数据".format(self.td))
-        log.info(all_stocks)
+        all_stocks = self.get_all_stocks()
+        log.info("all_stocks: {}".format(all_stocks))
 
-        for stock in all_stocks:
-            stock_td_k_data = all_stocks_data.get(stock, None)
-            if stock_td_k_data is None:  # 还未上市
-                continue
-
-            stock_td = stock_td_k_data.index[-1]
-            if not stock_td == self.td:    # 个股当天停盘
-                continue
-
-            self._refresh_stock_data(stock, stock_td_k_data, self.td)
+        self.down_load_last_two_days_data()
 
         for name in self._styles:
             for stock in all_stocks:
-                stock_td_k_data = all_stocks_data.get(stock, None)
-                if stock_td_k_data is None:   # 还未上市
+                # 还未上市
+                if stock not in self._catch_data:
                     continue
-                stock_td = stock_td_k_data.index[-1]
-                stock_yt = stock_td_k_data.index[0]
-
-                # 个股当天停盘
-                if not stock_td == self.td:
+                # 当天停盘
+                if not self.td in self._catch_data[stock]:
                     continue
-
-                self._styles[name].handle_data(stock, stock_td, stock_td_k_data.iloc[-1].to_dict())
+                self._styles[name].handle_data(stock, self.td, self._catch_data[stock].loc[self.td].to_dict())
 
     def before_trading_start(self, account):
         pass
