@@ -119,7 +119,7 @@ class Styles(object):
         设置当天时间
         :return:
         """
-        td = get_datetime()
+        td = datetime.datetime.strptime(get_datetime().strftime("%Y%m%d"), "%Y%m%d")
         if self.td == td:
             return
         if self.td is None:
@@ -138,28 +138,31 @@ class Styles(object):
         if self.last_two_days_data_refresh_date is None or not self.last_two_days_data_refresh_date == self.td:
             self.last_two_days_data_refresh_date = self.td
             if self.start_date > self.td:
-                # 如果还没有超过起始时间，则相当于没有任何数据
+                log.info("还未到达框架起始时间，不下载任何数据")
                 self.last_two_days_data = {}
                 self._catch_data = {}
             else:
                 all_stocks = self.get_all_stocks()
                 if self.start_date == self.td:
-                    # 如果正好是起始时间，则只请求一天的数据
+                    log.info("正好是起始时间，只请求一天的数据")
                     self.last_two_days_data = get_candle_stick(all_stocks + [self._driver], self.td.strftime("%Y%m%d"),
                                                                fre_step="1d", fields=self.fileds,
                                                                skip_paused=True, bar_count=1)
                     self._catch_data = self.last_two_days_data
                 else:
+                    log.info("超过起始时间，请求两天的数据")
                     self.last_two_days_data = get_candle_stick(all_stocks + [self._driver], self.td.strftime("%Y%m%d"),
                                                                fre_step="1d", fields=self.fileds,
                                                                skip_paused=True, bar_count=2)
                     for stock, last_two_days_data in self.last_two_days_data.items():
                         if not self.td in last_two_days_data:
                             # 当天停盘
+                            log.info("{} 停盘 日期：{}, 下载数据：{}".format(stock, self.td, last_two_days_data))
                             continue
                         # 剔除掉小于起始时间的数据
-                        last_two_days_data.drop([i for i in last_two_days_data if i < self.start_date], inplace=True)
+                        last_two_days_data.drop([i for i in last_two_days_data.index if i < self.start_date], inplace=True)
                         if len(last_two_days_data) == 1:
+                            log.info("{} 上市日期，只下载到一天的数据".format(stock))
                             self._catch_data[stock] = last_two_days_data
                         else:
                             if stock not in self._catch_data:
@@ -169,6 +172,8 @@ class Styles(object):
                                                  .format(self._catch_data[stock].index[-1], last_two_days_data.index[0]))
                             if not self._catch_data[stock].iloc[-1]["close"] == last_two_days_data.iloc[0]["close"]:
                                 # 需要复权，先拿着所有历史数据去对让形态数据复权，然后裁剪后赋值给缓存数据
+                                log.info("{} 发生复权 \n缓存的最后一天数据：{}\n 下载的前一天数据：{}"
+                                         .format(stock, self._catch_data[stock].iloc[-1]["close"], last_two_days_data.iloc[0]["close"]))
                                 stock_all_history_data = self.get_stock_all_history_data(stock)
                                 missed_date = set(self._catch_data[stock].index) - set(stock_all_history_data.index)
                                 if missed_date:
@@ -179,8 +184,9 @@ class Styles(object):
                                 stock_all_history_data.drop([i for i in stock_all_history_data.index if i < catch_data_first_data], inplace=True)
                                 self._catch_data[stock] = stock_all_history_data
                             else:
+                                log.info("{} 未复权 简单缓存最后一天的数据".format(stock))
                                 self._catch_data[stock] = self._catch_data[stock].append(last_two_days_data.iloc[1])
-                    for stock, stock_catched_data in self._catch_data:
+                    for stock, stock_catched_data in self._catch_data.itmes():
                         if len(stock_catched_data) > self.__catch_data_num__:
                             # 缓存数据超长时删除第一行即可
                             stock_catched_data.drop(stock_catched_data.index[0], inplace=True)
@@ -210,12 +216,15 @@ class Styles(object):
         self.down_load_last_two_days_data()
 
         for name in self._styles:
+            log.info("计算形态:{} 数据".format(name))
             for stock in all_stocks:
+                log.info("计算个股{} 数据".format(stock))
                 # 还未上市
                 if stock not in self._catch_data:
                     continue
                 # 当天停盘
-                if not self.td in self._catch_data[stock]:
+                if not self.td == self._catch_data[stock].index[-1]:
+                    log.info("{}停盘，不计算形态数据".format(stock))
                     continue
                 self._styles[name].handle_data(stock, self.td, self._catch_data[stock].loc[self.td].to_dict())
 

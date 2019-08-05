@@ -6,7 +6,7 @@ class KData:
     today = None
     _rights_date = None
 
-    def _handle_rights(self, all_history_data):
+    def handle_rights(self, all_history_data):
         """
         处理复权
         :param all_history_data:
@@ -32,8 +32,8 @@ class KPoint(KData):
         self.k_data = k_data
         self.origin_k_data = k_data
 
-    def _handle_rights(self, all_history_data):
-        super()._rights_date(all_history_data)
+    def handle_rights(self, all_history_data):
+        super().handle_rights(all_history_data)
         self.k_data = all_history_data[self.time]
 
 
@@ -44,8 +44,8 @@ class Point(KPoint):
         self.origin_price = price
         self.index = index
 
-    def _handle_rights(self, all_history_data):
-        super()._handle_rights(all_history_data)
+    def handle_rights(self, all_history_data):
+        super().handle_rights(all_history_data)
         self.price = self.k_data["close"] / self.origin_k_data["close"] * self.origin_price
 
 
@@ -106,6 +106,7 @@ class TrendPointPool(Style):
         self.indexs.setdefault(stock, 0)
         self.indexs[stock] += 1
         point = TrendKPoint(stock, time, self.indexs[stock], k_data, self.pre_points.get(stock))
+        log.info("stock: {}  point status:{}".format(stock, point.trend))
         self.pre_points[stock] = point
         stock_point_list = self.points.setdefault(stock, [])
         stock_point_list.append(point)
