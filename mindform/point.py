@@ -34,7 +34,7 @@ class KPoint(KData):
 
     def handle_rights(self, all_history_data):
         super().handle_rights(all_history_data)
-        self.k_data = all_history_data[self.time]
+        self.k_data = all_history_data.loc[self.time].to_dict()
 
 
 class Point(KPoint):
@@ -92,6 +92,9 @@ class TrendKPoint(KPoint):
                 else:
                     self.trend = self.平
 
+    def __unicode__(self):
+        return "{}: {}".format(self.time, self.trend)
+
 
 class TrendPointPool(Style):
     """
@@ -101,19 +104,48 @@ class TrendPointPool(Style):
         self.pre_points = {}
         self.points = {}
         self.indexs = {}
+        self.high_points = {}
+        self.low_points = {}
 
     def handle_data(self, stock, time, k_data):
-        self.indexs.setdefault(stock, 0)
-        self.indexs[stock] += 1
-        point = TrendKPoint(stock, time, self.indexs[stock], k_data, self.pre_points.get(stock))
+        index = self.indexs.get(stock, 0)
+        pre_point = self.pre_points.get(stock)
+        point = TrendKPoint(stock, time, index, k_data, pre_point)
         log.info("stock: {}  point status:{}".format(stock, point.trend))
-        self.pre_points[stock] = point
+
+        if point.trend == TrendKPoint.下跌:
+            if self.low_points.get(stock) is None or point.k_data["low"] <= self.low_points[stock].k_data["low"]:
+                log.info("低点比较: {} {}".format(point.k_data["low"], self.low_points[stock].k_data["low"] if stock in self.low_points else None))
+                self.low_points[stock] = point
+        elif point.trend == TrendKPoint.上涨:
+            if self.high_points.get(stock) is None or point.k_data["high"] >= self.high_points[stock].k_data["high"]:
+                self.high_points[stock] = point
+
         stock_point_list = self.points.setdefault(stock, [])
-        stock_point_list.append(point)
+        if pre_point is not None:
+            if pre_point.trend * point.trend < 0:
+                if point.trend > 0:
+                    log.info("stock:{} 低点: {}".format(stock, self.low_points[stock]))
+                    stock_point_list.append(self.low_points[stock])
+                    self.low_points[stock] = None
+                elif point.trend < 0:
+                    log.info("stock:{} 高点: {}".format(stock, self.high_points[stock]))
+                    stock_point_list.append(self.high_points[stock])
+                    self.high_points[stock] = None
+                else:
+                    pass
+
+        self.pre_points[stock] = point
+        index += 1
+        self.indexs[stock] = index
         return point
 
     def handle_rights(self, stock, all_history_data):
         for point in self.points.get(stock, []):
             point.handle_rights(all_history_data)
-        if self.pre_points[stock]:
+        if self.pre_points.get(stock) is not None:
             self.pre_points[stock].handle_rights(all_history_data)
+        if self.high_points.get(stock) is not None:
+            self.high_points[stock].handle_rights(all_history_data)
+        if self.low_points.get(stock) is not None:
+            self.low_points[stock].handle_rights(all_history_data)
