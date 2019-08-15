@@ -2,20 +2,7 @@
 
 from basestyle import Style
 
-class KData:
-    today = None
-    _rights_date = None
-
-    def handle_rights(self, all_history_data):
-        """
-        处理复权
-        :param all_history_data:
-        :return:
-        """
-        self._rights_date = self.today
-
-
-class KPoint(KData):
+class KPoint(Style):
     """
     基础K线点
     """
