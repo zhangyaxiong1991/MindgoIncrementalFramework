@@ -1,4 +1,4 @@
 .*
-.py[cd]
+*.py[cd]
 venv/*
 output/*
