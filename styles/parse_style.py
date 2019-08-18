@@ -109,13 +109,13 @@ class PointField(BaseField):
         self.price = price
         self.pre_price = price
         self._store_k_data = store_k_data
-        self.close = self.styels.td_k_data['close']
-        self.pre_close = self.styels.td_k_data['close']
+        self.close = self.styels.now_k_data['close']
+        self.pre_close = self.styels.now_k_data['close']
 
         if store_k_data:
-            self.open = self.styels.td_k_data['open']
-            self.high = self.styels.td_k_data['high']
-            self.low = self.styels.td_k_data['low']
+            self.open = self.styels.now_k_data['open']
+            self.high = self.styels.now_k_data['high']
+            self.low = self.styels.now_k_data['low']
 
     def handle_rights(self, all_history_data):
         """

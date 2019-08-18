@@ -14,6 +14,6 @@ class MAMixin:
         for ma in mas:
             if ma > self.styles.cache_data_num:
                 raise Exception("均线天数必须小于{}".format(self.styles.cache_data_num))
-            if not self.td_k_data["close"] > self.MA(ma):
+            if not self.now_k_data["close"] > self.MA(ma):
                 return False
         return True

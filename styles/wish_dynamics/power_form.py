@@ -1,6 +1,8 @@
 # coding:utf-8
 
-from styles.point_style import Style
+import os
+
+from mindform.basestyle import Style
 from styles.parse_style import BaseParseStyle, DataField, PointField
 from basestyle import StyleField
 from mindform.mixins import MAMixin
@@ -34,9 +36,9 @@ class QLPoints(BaseParseStyle, MAMixin):
 
     def parse_pharse(self):
         ma = self.MA(10)
-        if self.td_k_data["low"] > ma:
+        if self.now_k_data["low"] > ma:
             self.now_data["pharse"].data = self.UP_MA10
-        elif self.td_k_data["high"] < ma:
+        elif self.now_k_data["high"] < ma:
             self.now_data["pharse"].data = self.DOWN_MA10
         else:
             self.now_data["pharse"].data = self.CROSS_MA10
@@ -46,10 +48,10 @@ class QLPoints(BaseParseStyle, MAMixin):
         yt_pharse = self.pre_data["pre_pharse"]
 
         if td_pharse == self.DOWN_MA10 and yt_pharse > self.DOWN_MA10:
-            self.now_data["start"] = PointField(self.td_k_data["open"])
+            self.now_data["start"] = PointField(self.now_k_data["open"])
         else:
-            if self.td_k_data["open"] < self.now_data["start"].price:
-                self.now_data["start"] = PointField(self.td_k_data["open"])
+            if self.now_k_data["open"] < self.now_data["start"].price:
+                self.now_data["start"] = PointField(self.now_k_data["open"])
 
     def parse_force_flag(self):
         td_pharse = self.now_data["pharse"].data
@@ -57,7 +59,7 @@ class QLPoints(BaseParseStyle, MAMixin):
 
         # 回落到10日线时产生绝对走势标志
         if td_pharse == self.CROSS_MA10 and yt_pharse == self.UP_MA10:
-            self.now_data["force_flag"] = PointField(self.td_k_data["open"])
+            self.now_data["force_flag"] = PointField(self.now_k_data["open"])
         # 运行到10日线下方，绝对走势标志失效
         elif td_pharse < self.CROSS_MA10:
             self.now_data["force_flag"] = None
@@ -70,15 +72,15 @@ class QLPoints(BaseParseStyle, MAMixin):
         if td_pharse > self.CROSS_MA10:
             return
         # 收阴线，则无条件绝对起点结束
-        elif not self.td_k_data["close"] > self.td_k_data["open"]:
+        elif not self.now_k_data["close"] > self.now_k_data["open"]:
             self.now_data["force_start"] = None
         # 如果之前没有绝对起点，则收阳线后即为绝对起点
         elif self.now_data["force_start"] is None:
-            self.now_data["force_start"] = PointField(self.td_k_data["close"])
+            self.now_data["force_start"] = PointField(self.now_k_data["close"])
         # 如果之前有绝对起点，则如果不符合条件则新的一天为绝对起点
-        elif not (self.td_k_data["close"] > self.yt_k_data["close"] and self.td_k_data["high"] > self.yt_k_data[
-            "high"] and self.td_k_data["open"] > self.yt_k_data["open"]):
-            self.now_data["force_start"] = PointField(self.td_k_data["close"])
+        elif not (self.now_k_data["close"] > self.yt_k_data["close"] and self.now_k_data["high"] > self.yt_k_data[
+            "high"] and self.now_k_data["open"] > self.yt_k_data["open"]):
+            self.now_data["force_start"] = PointField(self.now_k_data["close"])
         # 之前有绝对起点，当天收阳，且符合条件
         else:
             pass
@@ -124,21 +126,19 @@ class QiangLi(Style, MAMixin):
         if yt_pharse == self.BEFORE_FORMATION:
             if self.ql.now_data["pharse"].data == QLPoints.UP_MA10:
                 if self.up_break_mas([10, 20, 50, 200]):
-                    if self.td_k_data["close"] / self.ql.now_data["start"].price >= 1.18:
-                        self.now_data["pharse"] = self.FORMING
+                    if self.now_k_data["close"] / self.ql.now_data["start"].price >= 1.18:
+                        self.now_data["pharse"].data = self.FORMING
 
         elif yt_pharse == self.FORMING:
             if self.ql.now_data["pharse"].data < QLPoints.UP_MA10:
-                if self.td_k_data['close'] < self.td_k_data['open']:
+                if self.now_k_data['close'] < self.now_k_data['open']:
                     self.now_data["pharse"].data = self.GREEN_ARRIVE
                 else:
                     self.now_data["pharse"].data = self.RED_ARRIVE
-            else:
-                if se
 
         elif yt_pharse == 1:
             # 向下跳空则结束
-            if self.td_k_data['high'] < self.yt_k_data['low']:
+            if self.now_k_data['high'] < self.yt_k_data['low']:
                 self.now_data["pharse"] = 10
 
             # 阴线向下加速
@@ -146,48 +146,8 @@ class QiangLi(Style, MAMixin):
                 self.now_data["pharse"] = self.ACCELERATED_GREEN_FALL
 
             # 收阳
-            elif self.td_k_data['close'] > self.td_k_data['open']:
+            elif self.now_k_data['close'] > self.now_k_data['open']:
                 self.now_data["pharse"] = 2
 
         elif yt_pharse == 10 or yt_pharse == 2:
             pass
-
-
-# ---------------------------------------------------------------
-def initialize(account):
-    # 设置要交易的证券(600519.SH 贵州茅台)
-    account.security = '600519.SH'
-    account.styles = Styles(['600519.SH'])
-    account.styles.regist(TestStyle())
-
-
-def get_start_date(symbol):
-    """
-    获取个股上市日期, 如果超过初始化函数中的回测起点则返回回测起点
-    """
-    start_date = get_security_info(symbol).start_date
-    if start_date < account.start_date:
-        return account.start_date
-    else:
-        return start_date
-
-
-def before_trading_start(account, data):
-    account.styles.run()
-    pass
-
-
-def after_trading_end(account, data):
-    hist1 = get_candle_stick('000001.SZ', end_date='20180711', fre_step='1d', fields=['close', 'factor'],
-                             skip_paused=False, fq='pre', bar_count=3)
-    hist2 = get_candle_stick('000001.SZ', end_date='20180712', fre_step='1d', fields=['close', 'factor'],
-                             skip_paused=False, fq='pre', bar_count=3)
-    log.info(hist1)
-    log.info(hist2)
-
-
-# 设置买卖条件，每个交易频率（日/分钟/tick）调用一次
-def handle_data(account, data):
-    # 获取证券过去20日的收盘价数据
-    pass
-

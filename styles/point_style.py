@@ -20,19 +20,19 @@ class KPoint(Style):
         self.origin_k_data = k_data
 
     def handle_rights(self, all_history_data):
-        super().handle_rights(all_history_data)
+        super(KPoint, self).handle_rights(all_history_data)
         self.k_data = all_history_data.loc[self.time].to_dict()
 
 
 class Point(KPoint):
     def __init__(self, stock, time, index, k_data, price):
-        super().__init__(stock, time, k_data)
+        super(Point, self).__init__(stock, time, k_data)
         self.price = price
         self.origin_price = price
         self.index = index
 
     def handle_rights(self, all_history_data):
-        super().handle_rights(all_history_data)
+        super(Point, self).handle_rights(all_history_data)
         self.price = self.k_data["close"] / self.origin_k_data["close"] * self.origin_price
 
 
@@ -47,7 +47,7 @@ class TrendKPoint(KPoint):
         """
         :param pre: 前一个点，用于对当天趋势的判断，但并不需保存
         """
-        super().__init__(stock, time, index, k_data)
+        super(TrendKPoint, self).__init__(stock, time, index, k_data)
         if pre is None:
             self.trend = self.平
 

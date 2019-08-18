@@ -159,7 +159,7 @@ class Styles(object):
                                                                fre_step="1d", fields=self.fileds,
                                                                skip_paused=True, bar_count=2)
                     for stock, last_two_days_data in self.last_two_days_data.items():
-                        if not self.td in last_two_days_data:
+                        if not self.td in last_two_days_data.index:
                             # 当天停盘
                             log.info("{} 停盘 日期：{}, 下载数据：{}".format(stock, self.td, last_two_days_data))
                             continue
@@ -190,7 +190,7 @@ class Styles(object):
                             else:
                                 log.info("{} 未复权 简单缓存最后一天的数据".format(stock))
                                 self.stocks_cache_data[stock] = self.stocks_cache_data[stock].append(last_two_days_data.iloc[1])
-                    for stock, stock_catched_data in self.stocks_cache_data.itmes():
+                    for stock, stock_catched_data in self.stocks_cache_data.items():
                         if len(stock_catched_data) > self.cache_data_num:
                             # 缓存数据超长时删除第一行即可
                             stock_catched_data.drop(stock_catched_data.index[0], inplace=True)
@@ -213,15 +213,15 @@ class Styles(object):
         :return:
         """
         self.now_style = self._styles[style_name]
-        self.now_style.now_k_data = self.last_two_days_data.iloc[-1]
-        self.now_style.pre_k_dta = self.last_two_days_data.iloc[0]
+        self.now_style.now_k_data = self.last_two_days_data[self.now_stock].iloc[-1]
+        self.now_style.pre_k_dta = self.last_two_days_data[self.now_stock].iloc[0]
 
     def set_depend_styles(self):
         """
         向当前计算形态注入依赖形态的数据
         :return:
         """
-        for name in self.now_style.__dependes__:
+        for name in self.now_style.__depends__:
             setattr(self.now_style, name, self._styles[name])
             self._styles[name].set_now_stock(self.now_stock)
 
@@ -252,6 +252,7 @@ class Styles(object):
                     log.info("{}停盘，不计算形态数据".format(stock))
                     continue
                 self.stock_cache_data = self.stocks_cache_data[stock]
+                self.set_now_stock(stock)
                 self.set_now_style(name)
                 self.set_depend_styles()
                 self.now_style.handle_data(stock, self.td, self.stocks_cache_data[stock].loc[self.td].to_dict())
@@ -266,29 +267,8 @@ class Styles(object):
         self.run()
 
 
-if LOCAL:
-    s = Styles('000001', ['600086'])
-    s.regist([TrendPointPool])
-    while True:
-        s.after_trading_end(1)
-
-def init(account):
-    # 设置要交易的证券(600519.SH 贵州茅台)
-    account.security = '600519.SH'
-    s = Styles('000001.SH', ['600086.SH'], datetime.datetime.strptime('20190501', "%Y%m%d"))
-    s.regist([TrendPointPool])
-
-
-def before_trading(account):
-    pass
-
-
-def after_trading(account):
-    log.info("after_trading_end:{}".format(get_datetime()))
-    account.styles.after_trading_end(account)
-    log.info(account.styles._styles['TrendPointPool'].points.get('600089.SH'))
-
-
-def handle_data(account, data):
-    # 获取证券过去20日的收盘价数据
-    pass
+# if LOCAL:
+#     s = Styles('000001', ['600086'])
+#     s.regist([TrendPointPool])
+#     while True:
+#         s.after_trading_end(1)
