@@ -3,15 +3,7 @@
 from collections import OrderedDict
 import datetime
 
-from styles.point_style import TrendPointPool
-from basestyle import Style
-
-LOCAL = False
-try:
-    from mindgo import log, history
-    LOCAL = True
-except Exception:
-    pass
+from mindform.basestyle import Style
 
 
 class Styles(object):
@@ -265,10 +257,3 @@ class Styles(object):
 
     def after_trading_end(self, account):
         self.run()
-
-
-# if LOCAL:
-#     s = Styles('000001', ['600086'])
-#     s.regist([TrendPointPool])
-#     while True:
-#         s.after_trading_end(1)

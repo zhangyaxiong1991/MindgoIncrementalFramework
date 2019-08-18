@@ -13,6 +13,9 @@ class StyleField:
         else:
             self.handle_rights = False
 
+    def __set_styles__(self, styles):
+        self.field_class.styles = styles
+
 
 class BaseMeta(object):
     k_data_fields = ['open', 'high', 'low', 'close', 'high_limit', 'low_limit', 'factor', 'avg_price', 'prev_close',
@@ -21,9 +24,10 @@ class BaseMeta(object):
 
 
 class BaseStyle(object):
-    @staticmethod
-    def __set__styles__(styles):
+    def __set__styles__(self, styles):
         BaseStyle.styles = styles
+        for k, v in self.__fields__.items():
+            v.__set__styles__(styles)
 
     def __setattr__(self, key, value):
         if key in self.__depends__:

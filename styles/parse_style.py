@@ -6,7 +6,7 @@
 # 计算前框架负责填充前一天的数据 -- 将数据复制到对应字段，计算后存储对应数据
 
 
-from basestyle import Style
+from mindform.basestyle import Style
 
 
 class BaseField:
@@ -90,9 +90,11 @@ class BaseParseStyle(Style):
         self.now_data = self.stocks_data[self.now_stock]
         self.pre_data = self.stocks_pre_data[self.now_stock]
 
-    @staticmethod
-    def __set__styles__(styles):
-        Style.__set__styles__(styles)
+    def init_first_day_data(self, stock, time, k_data):
+        return self.init_first_row(k_data)
+
+    def __set__styles__(self, styles):
+        super(BaseParseStyle, self).__set__styles__(styles)
         BaseField.__set_styles__(styles)
 
 class PointField(BaseField):

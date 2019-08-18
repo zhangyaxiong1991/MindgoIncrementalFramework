@@ -4,7 +4,7 @@ import os
 
 from mindform.basestyle import Style
 from styles.parse_style import BaseParseStyle, DataField, PointField
-from basestyle import StyleField
+from mindform.basestyle import StyleField
 from mindform.mixins import MAMixin
 
 
@@ -87,6 +87,7 @@ class QLPoints(BaseParseStyle, MAMixin):
 
     def set_pre_data(self):
         self.pre_data["pre_pharse"] = self.now_data["pharse"].data
+        log.info("pharse:{}, start:{}".format(self.now_data["pharse"].data, self.now_data["pharse"].date))
 
 
 class QiangLi(Style, MAMixin):

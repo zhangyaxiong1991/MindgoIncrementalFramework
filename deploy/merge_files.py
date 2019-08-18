@@ -10,7 +10,8 @@ file_path = __file__.replace('/', os.sep)
 
 if __name__ == '__main__':
     finder = ModuleFinder(encoding='utf-8')
-    finder.run_script(r'D:\code\MindgoIncrementalFramework\policys\test01.py')
+    target = r'D:\code\MindgoIncrementalFramework\policys\test01.py'
+    finder.run_script(target)
 
     file_list = []
     keys = finder.modules.keys()
@@ -24,7 +25,6 @@ if __name__ == '__main__':
         print("%-25s" % key, m.__file__ or "")
 
     keys = finder.modules.keys()
-    keys = reversed(keys)
     for key in keys:
         m = finder.modules[key]
         if m.__file__ is None:
@@ -33,7 +33,11 @@ if __name__ == '__main__':
             continue
         if not m.__file__.startswith(root_dir):
             continue
+        if m.__file__ == target:
+            continue
+        print(key)
         file_list.append(m.__file__)
+    file_list.append(target)
 
     merge_file = ''
     for file in file_list:

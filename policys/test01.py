@@ -1,13 +1,13 @@
 # coding: utf-8
 from mindform.style import Styles
-from styles.point_style import TrendPointPool
+from styles.wish_dynamics.power_form import QLPoints
 
 
 def init(account):
     # 设置要交易的证券(600519.SH 贵州茅台)
     account.security = '000001.SH'
     s = Styles('000001.SH', ['600023.SH'], datetime.datetime.strptime('20190603', "%Y%m%d"))
-    s.regist([TrendPointPool])
+    s.regist([QLPoints])
     account.styles = s
 
 
