@@ -24,10 +24,10 @@ class BaseMeta(object):
 
 
 class BaseStyle(object):
-    def __set__styles__(self, styles):
+    def __set_styles__(self, styles):
         BaseStyle.styles = styles
         for k, v in self.__fields__.items():
-            v.__set__styles__(styles)
+            v.__set_styles__(styles)
 
     def __setattr__(self, key, value):
         if key in self.__depends__:

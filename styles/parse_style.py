@@ -93,8 +93,8 @@ class BaseParseStyle(Style):
     def init_first_day_data(self, stock, time, k_data):
         return self.init_first_row(k_data)
 
-    def __set__styles__(self, styles):
-        super(BaseParseStyle, self).__set__styles__(styles)
+    def __set_styles__(self, styles):
+        super(BaseParseStyle, self).__set_styles__(styles)
         BaseField.__set_styles__(styles)
 
 class PointField(BaseField):

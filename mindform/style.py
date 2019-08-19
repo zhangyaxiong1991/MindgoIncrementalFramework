@@ -89,7 +89,7 @@ class Styles(object):
                     styles.add(i)
         self.cache_data_num = 2
         for style_name, style in self._styles.items():
-            style.__set__styles__(self)
+            style.__set_styles__(self)
             if style.__catch_data_num__ > self.cache_data_num:
                 self.cache_data_num = style.__catch_data_num__
 
