@@ -3,7 +3,7 @@
 import os
 
 from mindform.basestyle import Style
-from styles.parse_style import BaseParseStyle, DataField, PointField
+from styles.parse_style import *
 from mindform.basestyle import StyleField
 from mindform.mixins import MAMixin
 
