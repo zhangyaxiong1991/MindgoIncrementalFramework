@@ -212,9 +212,9 @@ class Styles(object):
         """
         self.now_style = self._styles[style_name]
         self.now_style.now_k_data = self.last_two_days_data[self.now_stock].iloc[-1]
-        self.now_style.pre_k_dta = self.last_two_days_data[self.now_stock].iloc[0]
+        self.now_style.pre_k_data = self.last_two_days_data[self.now_stock].iloc[0]
         self.now_k_data = self.last_two_days_data[self.now_stock].iloc[-1]
-        self.pre_k_dta = self.last_two_days_data[self.now_stock].iloc[0]
+        self.pre_k_data = self.last_two_days_data[self.now_stock].iloc[0]
 
     def set_depend_styles(self):
         """

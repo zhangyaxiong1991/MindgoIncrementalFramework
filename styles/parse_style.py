@@ -62,10 +62,11 @@ class BaseParseStyle(Style):
         else:
             self.pre_data = self.stocks_pre_data.get(stock, {})
             for name in self.__fields__:
-                getattr(self, 'parse_' + name)(stock, time, k_data)
+                getattr(self, 'parse_' + name)()
         self.set_pre_data()
         self.stocks_pre_data[stock] = self.pre_data
         self.check_result(stock)
+        self.stocks_data[stock] = self.now_data
 
     def set_pre_data(self):
         """
@@ -124,7 +125,7 @@ class PointField(BaseField):
         factor = self.close / self.pre_close
         if self.price is not None:
             self.price = self.pre_price * factor
-        if self.store_k_data is not None:
+        if self._store_k_data:
             self.open = all_history_data.loc[self.date]['open']
             self.high = all_history_data.loc[self.date]['high']
             self.low = all_history_data.loc[self.date]['low']

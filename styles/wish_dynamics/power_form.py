@@ -78,8 +78,8 @@ class QLPoints(BaseParseStyle, MAMixin):
         elif self.now_data["force_start"] is None:
             self.now_data["force_start"] = PointField(self.now_k_data["close"])
         # 如果之前有绝对起点，则如果不符合条件则新的一天为绝对起点
-        elif not (self.now_k_data["close"] > self.yt_k_data["close"] and self.now_k_data["high"] > self.yt_k_data[
-            "high"] and self.now_k_data["open"] > self.yt_k_data["open"]):
+        elif not (self.now_k_data["close"] > self.pre_k_data["close"] and self.now_k_data["high"] > self.pre_k_data[
+            "high"] and self.now_k_data["open"] > self.pre_k_data["open"]):
             self.now_data["force_start"] = PointField(self.now_k_data["close"])
         # 之前有绝对起点，当天收阳，且符合条件
         else:
@@ -139,7 +139,7 @@ class QiangLi(Style, MAMixin):
 
         elif yt_pharse == 1:
             # 向下跳空则结束
-            if self.now_k_data['high'] < self.yt_k_data['low']:
+            if self.now_k_data['high'] < self.pre_k_data['low']:
                 self.now_data["pharse"] = 10
 
             # 阴线向下加速

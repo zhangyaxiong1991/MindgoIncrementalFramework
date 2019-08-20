@@ -70,7 +70,7 @@ class StyleCreator(type):
 
 
 class Style(BaseStyle, metaclass=StyleCreator):
-    __catch_data_num__ = 2
+    __catch_data_num__ = 20
     __catch_k_data__ = None
 
     def handle_data(self, stock, time, k_data):
@@ -93,8 +93,3 @@ class Style(BaseStyle, metaclass=StyleCreator):
         :return:
         """
         raise Exception('must be override')
-
-    def MA(self, count):
-        if count > self.__catch_data_num__:
-            raise Exception("均线长度超过缓存数据")
-        return self.__catch_data_num__.iloc[-count:]['close'].mean()
