@@ -18,7 +18,6 @@ def before_trading(account):
 def after_trading(account):
     log.info("after_trading_end:{}".format(get_datetime()))
     account.styles.after_trading_end(account)
-    log.info(account.styles._styles['TrendPointPool'].points.get('600089.SH'))
 
 
 def handle_data(account, data):

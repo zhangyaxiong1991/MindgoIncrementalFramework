@@ -3,11 +3,14 @@
 from collections import OrderedDict
 import datetime
 
-from mindform.basestyle import Style
+from mindform.basestyle import Style, StyleField, BaseField
 
 
 class Styles(object):
     def __init__(self, driver, follow_stocks, start_date):
+        Style.styles = self
+        StyleField.styles = self
+        BaseField.styles = self
         self.start_date = start_date
         self._driver = driver  # 驱动个股
 
@@ -37,6 +40,8 @@ class Styles(object):
         self.now_stock = None
         self.now_style = None
         self.now_denpend_styles = None
+        self.now_k_data = None
+        self.pre_k_dta = None
 
     def get_stock_all_history_data(self, stock, now=None):
         start_date = self.start_date
@@ -89,7 +94,8 @@ class Styles(object):
                     styles.add(i)
         self.cache_data_num = 2
         for style_name, style in self._styles.items():
-            style.__set_styles__(self)
+            for depend_style in style.__depends__:
+                setattr(style, depend_style, self._styles[depend_style])
             if style.__catch_data_num__ > self.cache_data_num:
                 self.cache_data_num = style.__catch_data_num__
 
@@ -207,6 +213,8 @@ class Styles(object):
         self.now_style = self._styles[style_name]
         self.now_style.now_k_data = self.last_two_days_data[self.now_stock].iloc[-1]
         self.now_style.pre_k_dta = self.last_two_days_data[self.now_stock].iloc[0]
+        self.now_k_data = self.last_two_days_data[self.now_stock].iloc[-1]
+        self.pre_k_dta = self.last_two_days_data[self.now_stock].iloc[0]
 
     def set_depend_styles(self):
         """
@@ -214,7 +222,6 @@ class Styles(object):
         :return:
         """
         for name in self.now_style.__depends__:
-            setattr(self.now_style, name, self._styles[name])
             self._styles[name].set_now_stock(self.now_stock)
 
     def run(self):

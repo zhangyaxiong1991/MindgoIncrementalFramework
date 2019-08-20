@@ -6,13 +6,7 @@
 # 计算前框架负责填充前一天的数据 -- 将数据复制到对应字段，计算后存储对应数据
 
 
-from mindform.basestyle import Style
-
-
-class BaseField:
-    @staticmethod
-    def __set_styles__(styles):
-        BaseField.styles = styles
+from mindform.basestyle import Style, BaseField
 
 
 class BaseParseStyle(Style):
@@ -21,8 +15,8 @@ class BaseParseStyle(Style):
         self.stocks_date = {} # 存储每只个股已计算的日期
         self.stocks_pre_data = {} # 存储每只个股前一天的数据，有计算函数自己计算，框架负责存储，并对其进行复权处理
 
-        self.pre_data = None # 计算单个个股时存储个股前一天的字段数据
-        self.now_data = None # 计算单个个股时存储个股当天的字段数据
+        self.pre_data = {} # 计算单个个股时存储个股前一天的字段数据
+        self.now_data = {} # 计算单个个股时存储个股当天的字段数据
 
         # 由计算框架注入
         self.now_k_data = None
@@ -97,6 +91,7 @@ class BaseParseStyle(Style):
         super(BaseParseStyle, self).__set_styles__(styles)
         BaseField.__set_styles__(styles)
 
+
 class PointField(BaseField):
     """
     当比较大小时，直接使用后复权数据即可
@@ -107,17 +102,17 @@ class PointField(BaseField):
     _rights_date = None
 
     def __init__(self, price=None, store_k_data=False):
-        self.date = self.styels.td
+        self.date = self.styles.td
         self.price = price
         self.pre_price = price
         self._store_k_data = store_k_data
-        self.close = self.styels.now_k_data['close']
-        self.pre_close = self.styels.now_k_data['close']
+        self.close = self.styles.now_k_data['close']
+        self.pre_close = self.styles.now_k_data['close']
 
         if store_k_data:
-            self.open = self.styels.now_k_data['open']
-            self.high = self.styels.now_k_data['high']
-            self.low = self.styels.now_k_data['low']
+            self.open = self.styles.now_k_data['open']
+            self.high = self.styles.now_k_data['high']
+            self.low = self.styles.now_k_data['low']
 
     def handle_rights(self, all_history_data):
         """

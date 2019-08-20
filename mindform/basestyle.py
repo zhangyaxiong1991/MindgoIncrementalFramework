@@ -17,6 +17,10 @@ class StyleField:
         self.field_class.styles = styles
 
 
+class BaseField:
+    pass
+
+
 class BaseMeta(object):
     k_data_fields = ['open', 'high', 'low', 'close', 'high_limit', 'low_limit', 'factor', 'avg_price', 'prev_close',
                       'volume', 'turnover', 'quote_rate', 'turnover_rate', 'amp_rate', 'is_paused', 'is_st']
@@ -70,10 +74,25 @@ class Style(BaseStyle, metaclass=StyleCreator):
     __catch_k_data__ = None
 
     def handle_data(self, stock, time, k_data):
-        pass
+        """
+        计算个股对应形态上的数据
+        :param stock:
+        :param time:
+        :param k_data:
+        :return:
+        """
+        raise Exception('must be override')
 
     def handle_rights(self, stock, all_history_data):
-        pass
+        raise Exception('must be override')
+
+    def set_now_stock(self, stock):
+        """
+        将形态的now_data, pre_data设置为对应个股的数据，用于设置依赖形态的数据
+        :param stock:
+        :return:
+        """
+        raise Exception('must be override')
 
     def MA(self, count):
         if count > self.__catch_data_num__:
