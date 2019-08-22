@@ -25,6 +25,7 @@ class QLPoints(BaseParseStyle, MAMixin):
     start = StyleField(PointField)
     force_flag = StyleField(DataField)
     force_start = StyleField(PointField)
+    high_point = StyleField(PointField)
 
     def init_first_row(self, first_day_stock_data):
         d = {}
@@ -32,6 +33,7 @@ class QLPoints(BaseParseStyle, MAMixin):
         d["start"] = PointField(first_day_stock_data["close"])
         d["force_flag"] = None
         d["force_start"] = None
+        d["high_point"] = PointField(first_day_stock_data["high"])
         return d
 
     def parse_pharse(self):
@@ -85,9 +87,31 @@ class QLPoints(BaseParseStyle, MAMixin):
         else:
             pass
 
+    def parse_high_point(self):
+        """
+        最高点，在起点发生变化时重新记录
+        :return:
+        """
+        now_start = self.get_start_point().date
+        pre_start = self.pre_data["pre_start_date"]
+
+        if now_start != pre_start:
+            self.now_data['high_point'] = PointField(self.now_k_data['high'])
+        else:
+            if self.now_k_data['high'] >= self.self.now_data['high_point'].price:
+                self.now_data['high_point'] = PointField(self.now_k_data['high'])
+
     def set_pre_data(self):
         self.pre_data["pre_pharse"] = self.now_data["pharse"].data
+        self.pre_data["pre_start_date"] = self.get_start_point().date
         log.info("pharse:{}, start:{}".format(self.now_data["pharse"].data, self.now_data["start"].date))
+
+    def get_start_point(self):
+        if self.now_data["force_start"] is None:
+            return self.now_data["start"]
+        if self.now_data["force_start"].date > self.now_data["start"].date:
+            return self.now_data["force_start"]
+        return return self.now_data["start"]
 
 
 class QiangLi(Style, MAMixin):
@@ -171,11 +195,19 @@ class QiangLi(Style, MAMixin):
         pre_pharse = self.pre_data["pharse"]
         now_pharse = self.now_data["pharse"].data
 
-        if now_pharse in (self.p_形成前, self.p_回调中):
-            if self.ql.now_data['start'].date 
+        #  强力点，起点发生改变后，重新开始记录最高点
+        if now_pharse == self.p_回调中:
+            if pre_pharse == self.p_形成前:
+                self.now_data["zui_gao"] = self.ql.now_data['high_point']
+            else:
+                if self.now_k_data['high'] > self.now_data["zui_gao"].price:
+                    self.now_data["zui_gao"] = PointField(self.now_k_data['high'])
 
-        if self.ql.now_data['start'].date
+    def parse_dao_wei(self):
+        now_pharse = self.now_data["pharse"].data
 
+        if now_pharse in (self.p_阳到位, self.p_阴到位):
+            self.now_data['dao_wei'] = PointField()
 
     def set_pre_data(self):
         self.pre_data["pharse"] = self.now_data["pharse"].data

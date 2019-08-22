@@ -131,6 +131,11 @@ class Styles(object):
             self.yt = self.td
             self.td = td
 
+    def down_load_stock_data(self, start, end):
+        if not start in self.stock_cache_data.index:
+            stock_data = get_price([self.now_stock], start_date=start.strftime("%Y%m%d"), end_date=end.strftime("%Y%m%d"), fre_step='1d', fields=self.fileds,
+                                   skip_paused=False, fq='pre')
+
 
     def down_load_last_two_days_data(self):
         """
@@ -204,6 +209,9 @@ class Styles(object):
 
     def set_now_stock(self, stock):
         self.now_stock = stock
+        if not self.now_stock in self.stocks_cache_data:
+            raise Exception("个股数据未缓存:{}".format(self.now_stock))
+        self.stock_cache_data = self.stocks_cache_data[self.now_stock]
 
     def set_now_style(self, style_name):
         """

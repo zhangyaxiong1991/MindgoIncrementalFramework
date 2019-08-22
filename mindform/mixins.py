@@ -34,3 +34,7 @@ class MAMixin:
         if self.now_k_data['close'] < self.pre_k_data['open']:
             return True
         return False
+
+    def last_datas(self, start, end):
+        if start in self.styles.stock_cache_data.index:
+            return
