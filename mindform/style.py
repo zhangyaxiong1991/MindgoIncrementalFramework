@@ -95,7 +95,8 @@ class Styles(object):
         self.cache_data_num = 2
         for style_name, style in self._styles.items():
             for depend_style in style.__depends__:
-                setattr(style, depend_style, self._styles[depend_style])
+                depend_style_name = style.__depends__[depend_style].__name__
+                setattr(style, depend_style, self._styles[depend_style_name])
             if style.__catch_data_num__ > self.cache_data_num:
                 self.cache_data_num = style.__catch_data_num__
 
@@ -229,8 +230,8 @@ class Styles(object):
         向当前计算形态注入依赖形态的数据
         :return:
         """
-        for name in self.now_style.__depends__:
-            self._styles[name].set_now_stock(self.now_stock)
+        for name, style in self.now_style.__depends__.items():
+            self._styles[style.__name__].set_now_stock(self.now_stock)
 
     def run(self):
         """

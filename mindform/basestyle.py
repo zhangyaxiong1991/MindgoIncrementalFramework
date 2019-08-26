@@ -33,11 +33,6 @@ class BaseStyle(object):
         for k, v in self.__fields__.items():
             v.__set_styles__(styles)
 
-    def __setattr__(self, key, value):
-        if key in self.__depends__:
-            raise KeyError('依赖形态：{}的值无法直接设置'.format(key))
-        return super(BaseStyle, self).__setattr__(key, value)
-
 
 class StyleCreator(type):
     def __new__(cls, name, bases, attrs):
@@ -70,7 +65,7 @@ class StyleCreator(type):
 
 
 class Style(BaseStyle, metaclass=StyleCreator):
-    __catch_data_num__ = 20
+    __catch_data_num__ = 200
     __catch_k_data__ = None
 
     def handle_data(self, stock, time, k_data):

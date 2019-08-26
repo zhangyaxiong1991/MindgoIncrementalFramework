@@ -98,23 +98,25 @@ class QLPoints(BaseParseStyle, MAMixin):
         if now_start != pre_start:
             self.now_data['high_point'] = PointField(self.now_k_data['high'])
         else:
-            if self.now_k_data['high'] >= self.self.now_data['high_point'].price:
+            if self.now_k_data['high'] >= self.now_data['high_point'].price:
                 self.now_data['high_point'] = PointField(self.now_k_data['high'])
 
     def set_pre_data(self):
         self.pre_data["pre_pharse"] = self.now_data["pharse"].data
         self.pre_data["pre_start_date"] = self.get_start_point().date
-        log.info("pharse:{}, start:{}".format(self.now_data["pharse"].data, self.now_data["start"].date))
+        log.info("pharse:{}, start:{}, force_start:{}, high_point:{}".format(self.now_data["pharse"].data,
+                                                              self.now_data["start"], self.now_data['force_start'],
+                                                                             self.now_data["high_point"]))
 
     def get_start_point(self):
         if self.now_data["force_start"] is None:
             return self.now_data["start"]
         if self.now_data["force_start"].date > self.now_data["start"].date:
             return self.now_data["force_start"]
-        return return self.now_data["start"]
+        return self.now_data["start"]
 
 
-class QiangLi(Style, MAMixin):
+class QiangLi(BaseParseStyle, MAMixin):
     p_形成前 = 10 # 形成前
     p_回调中 = 30 # 下跌中，创新高则变回FORMING
     p_阴到位 = 40 # 阴到位，正常发展最终会发展为阳到位
@@ -155,7 +157,7 @@ class QiangLi(Style, MAMixin):
                 else:
                     self.now_data["pharse"].data = self.p_阳到位
 
-        elif yt_pharse in (self.p_阴到位, self.p_收阳):
+        elif yt_pharse in (self.p_阴到位, self.p_收阳前):
             if self.向下跳空() or self.阴加速():
                 self.now_data["pharse"].data = self.p_形成前
 
@@ -211,6 +213,11 @@ class QiangLi(Style, MAMixin):
 
     def set_pre_data(self):
         self.pre_data["pharse"] = self.now_data["pharse"].data
+        log.info("{}".format(self))
+
+    def __str__(self):
+        return "阶段:{}, 形成:{}, 最高:{}, 到位:{}".format(self.now_data['pharse'], self.now_data['xing_cheng'],
+                                                   self.now_data['zui_gao'], self.now_data['dao_wei'])
 
 
 

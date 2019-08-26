@@ -22,6 +22,9 @@ class BaseParseStyle(Style):
         self.now_k_data = None
         self.pre_k_data = None
 
+        self.now_stock = None
+        self.date = None
+
     def check_result(self, stock):
         for name in self.__fields__:
             if name not in self.now_data:
@@ -52,10 +55,12 @@ class BaseParseStyle(Style):
                     stock_field_data.handle_rights(all_history_data)
 
     def handle_data(self, stock, time, k_data):
+        self.now_stock = stock
         stock_date = self.stocks_date.get(stock, None)
         if stock_date is not None:
             if time <= stock_date:
                 raise Exception('个股：{} 在日期：{}的数据重复计算'.format(stock, time))
+        self.date = time
         self.now_data = self.stocks_data.get(stock, None)
         if self.now_data is None:
             self.now_data = self.init_first_day_data(stock, time, k_data)
@@ -133,7 +138,13 @@ class PointField(BaseField):
     def __cmp__(self, other):
         return self.price.__cmp__(other.price)
 
+    def __str__(self):
+        return "点|{}|{}".format(self.date, self.price)
+
 
 class DataField(BaseField):
     def __init__(self, data):
         self.data = data
+
+    def __str__(self):
+        return "{}".format(self.data)
