@@ -1,10 +1,13 @@
 # coding:utf-8
 
+from collections import OrderedDict
 
 class StyleField:
     """
     配置类，配置字段属性
     """
+    _index = 1
+
     def __init__(self, field_class, many=False):
         self.field_class = field_class
         self.many = many
@@ -12,6 +15,8 @@ class StyleField:
             self.handle_rights = True
         else:
             self.handle_rights = False
+        self._index = StyleField._index
+        StyleField._index += 1
 
     def __set_styles__(self, styles):
         self.field_class.styles = styles
@@ -49,6 +54,9 @@ class StyleCreator(type):
             attrs.pop(k)
         for k in fields:
             attrs.pop(k)
+        sorted_fields = [(k, v) for k, v in fields.items()]
+        sorted_fields = sorted(sorted_fields, key=lambda x: x[1]._index)
+        fields = OrderedDict(sorted_fields)
         attrs['__depends__'] = depends
         attrs['__fields__'] = fields
         attrs['__name__'] = name

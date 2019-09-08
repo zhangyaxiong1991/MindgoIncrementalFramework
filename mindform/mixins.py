@@ -35,6 +35,20 @@ class MAMixin:
             return True
         return False
 
-    def last_datas(self, start, end):
-        if start in self.styles.stock_cache_data.index:
-            return
+    def high(self, target, start, end):
+        if isinstance(start, int):
+            date = self.styles.stock_cache_data.iloc[start: end][target].idxmax()
+            return date, self.styles.stock_cache_data.iloc[date]
+        else:
+            date = self.styles.stock_cache_data.loc[start: end][target].argmax()
+            return date, self.styles.stock_cache_data.loc[date]
+
+    def low(self, target, start, end):
+        if isinstance(start, int):
+            date = self.styles.stock_cache_data.iloc[start: end][target].idxmin()
+            return date, self.styles.stock_cache_data.iloc[date]
+        else:
+            date = self.styles.stock_cache_data.loc[start: end][target].argmin()
+            return date, self.styles.stock_cache_data.loc[date]
+
+

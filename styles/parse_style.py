@@ -68,6 +68,7 @@ class BaseParseStyle(Style):
             self.pre_data = self.stocks_pre_data.get(stock, {})
             for name in self.__fields__:
                 getattr(self, 'parse_' + name)()
+                log.info("parse {}, result is {}".format(name, self.now_data[name]))
         self.set_pre_data()
         self.stocks_pre_data[stock] = self.pre_data
         self.check_result(stock)
@@ -107,18 +108,25 @@ class PointField(BaseField):
     today = None
     _rights_date = None
 
-    def __init__(self, price=None, store_k_data=False):
-        self.date = self.styles.td
+    def __init__(self, price=None, stock_k_data=None, date=None):
+        self.date = date
+        if self.date is None:
+            self.date = self.styles.td
         self.price = price
         self.pre_price = price
-        self._store_k_data = store_k_data
-        self.close = self.styles.now_k_data['close']
-        self.pre_close = self.styles.now_k_data['close']
 
-        if store_k_data:
+        if stock_k_data is None:
+            self.close = self.styles.now_k_data['close']
+            self.pre_close = self.styles.now_k_data['close']
             self.open = self.styles.now_k_data['open']
             self.high = self.styles.now_k_data['high']
             self.low = self.styles.now_k_data['low']
+        else:
+            self.close = stock_k_data['close']
+            self.pre_close = stock_k_data['close']
+            self.open = stock_k_data['open']
+            self.high = stock_k_data['high']
+            self.low = stock_k_data['low']
 
     def handle_rights(self, all_history_data):
         """

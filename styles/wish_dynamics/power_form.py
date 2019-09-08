@@ -22,18 +22,21 @@ class QLPoints(BaseParseStyle, MAMixin):
     }
 
     pharse = StyleField(DataField)
-    start = StyleField(PointField)
-    force_flag = StyleField(DataField)
+    dynamic_force_start = StyleField(DataField)
     force_start = StyleField(PointField)
-    high_point = StyleField(PointField)
+    start = StyleField(PointField)
 
     def init_first_row(self, first_day_stock_data):
         d = {}
         d["pharse"] = DataField(self.CROSS_MA10)
-        d["start"] = PointField(first_day_stock_data["close"])
-        d["force_flag"] = None
+        d["start"] = PointField(first_day_stock_data["open"])
+
+        d["dynamic_force_start"] = None
         d["force_start"] = None
-        d["high_point"] = PointField(first_day_stock_data["high"])
+        if first_day_stock_data["close"] > first_day_stock_data["open"]:
+            d["dynamic_force_start"] = PointField(first_day_stock_data["open"])
+            d["force_start"] = PointField(first_day_stock_data["open"])
+
         return d
 
     def parse_pharse(self):
@@ -45,76 +48,46 @@ class QLPoints(BaseParseStyle, MAMixin):
         else:
             self.now_data["pharse"].data = self.CROSS_MA10
 
-    def parse_start(self):
+    def parse_dynamic_force_start(self):
         td_pharse = self.now_data["pharse"].data
         yt_pharse = self.pre_data["pre_pharse"]
 
-        if td_pharse == self.DOWN_MA10 and yt_pharse > self.DOWN_MA10:
-            self.now_data["start"] = PointField(self.now_k_data["open"])
+        # 收阴线，则无条件绝对起点结束
+        if self.now_k_data["close"] < self.now_k_data["open"]:
+            self.now_data["dynamic_force_start"] = None
         else:
-            if self.now_k_data["open"] < self.now_data["start"].price:
-                self.now_data["start"] = PointField(self.now_k_data["open"])
+            if self.now_data["dynamic_force_start"] is None:
+                self.now_data["dynamic_force_start"] = PointField(self.now_k_data["open"])
 
-    def parse_force_flag(self):
-        td_pharse = self.now_data["pharse"].data
-        yt_pharse = self.pre_data["pre_pharse"]
-
-        # 回落到10日线时产生绝对走势标志
-        if td_pharse == self.CROSS_MA10 and yt_pharse == self.UP_MA10:
-            self.now_data["force_flag"] = PointField(self.now_k_data["open"])
-        # 运行到10日线下方，绝对走势标志失效
-        elif td_pharse < self.CROSS_MA10:
-            self.now_data["force_flag"] = None
+            # 收阳但未绝对向上，则充值动态绝对起点
+            elif not (self.now_k_data["close"] > self.pre_k_data["close"] and self.now_k_data["high"] > self.pre_k_data[
+                    "high"] and self.now_k_data["open"] > self.pre_k_data["open"]):
+                self.now_data["dynamic_force_start"] = PointField(self.now_k_data["open"])
 
     def parse_force_start(self):
         td_pharse = self.now_data["pharse"].data
         yt_pharse = self.pre_data["pre_pharse"]
 
-        # 在10日线上，则不影响绝对起点
-        if td_pharse > self.CROSS_MA10:
-            return
-        # 收阴线，则无条件绝对起点结束
-        elif not self.now_k_data["close"] > self.now_k_data["open"]:
-            self.now_data["force_start"] = None
-        # 如果之前没有绝对起点，则收阳线后即为绝对起点
-        elif self.now_data["force_start"] is None:
-            self.now_data["force_start"] = PointField(self.now_k_data["close"])
-        # 如果之前有绝对起点，则如果不符合条件则新的一天为绝对起点
-        elif not (self.now_k_data["close"] > self.pre_k_data["close"] and self.now_k_data["high"] > self.pre_k_data[
-            "high"] and self.now_k_data["open"] > self.pre_k_data["open"]):
-            self.now_data["force_start"] = PointField(self.now_k_data["close"])
-        # 之前有绝对起点，当天收阳，且符合条件
-        else:
-            pass
+        if td_pharse < self.UP_MA10 and yt_pharse == self.UP_MA10:
+            self.now_data["force_start"] = self.now_data['dynamic_force_start']
 
-    def parse_high_point(self):
-        """
-        最高点，在起点发生变化时重新记录
-        :return:
-        """
-        now_start = self.get_start_point().date
-        pre_start = self.pre_data["pre_start_date"]
+    def parse_start(self):
+        td_pharse = self.now_data["pharse"].data
+        yt_pharse = self.pre_data["pre_pharse"]
 
-        if now_start != pre_start:
-            self.now_data['high_point'] = PointField(self.now_k_data['high'])
+        if td_pharse < self.UP_MA10 and yt_pharse == self.UP_MA10:
+            if self.now_data["force_start"] is None:
+                self.now_data["start"] = PointField(self.now_k_data["open"])
+            else:
+                self.now_data["start"] = self.now_data["force_start"]
         else:
-            if self.now_k_data['high'] >= self.now_data['high_point'].price:
-                self.now_data['high_point'] = PointField(self.now_k_data['high'])
+            if self.now_k_data["open"] < self.now_data["start"].price:
+                self.now_data["start"] = PointField(self.now_k_data["open"])
 
     def set_pre_data(self):
         self.pre_data["pre_pharse"] = self.now_data["pharse"].data
-        self.pre_data["pre_start_date"] = self.get_start_point().date
-        log.info("pharse:{}, start:{}, force_start:{}, high_point:{}".format(self.now_data["pharse"].data,
-                                                              self.now_data["start"], self.now_data['force_start'],
-                                                                             self.now_data["high_point"]))
-
-    def get_start_point(self):
-        if self.now_data["force_start"] is None:
-            return self.now_data["start"]
-        if self.now_data["force_start"].date > self.now_data["start"].date:
-            return self.now_data["force_start"]
-        return self.now_data["start"]
-
+        log.info("pharse:{}, start:{}, force_start:{}".format(self.now_data["pharse"].data,
+                                                              self.now_data["start"], self.now_data['force_start']))
 
 class QiangLi(BaseParseStyle, MAMixin):
     p_形成前 = 10 # 形成前
@@ -176,7 +149,6 @@ class QiangLi(BaseParseStyle, MAMixin):
                     self.now_data["pharse"].data = self.p_阴2
                 else:
                     self.now_data["pharse"].data = self.p_形成前
-
             else:
                 self.now_data["pharse"].data = self.p_收阳
 
@@ -191,7 +163,7 @@ class QiangLi(BaseParseStyle, MAMixin):
         now_pharse = self.now_data["pharse"].data
 
         if pre_pharse == self.p_形成前 and now_pharse == self.p_回调中:
-            self.now_data['xing_cheng'] = PointField(store_k_data=True)
+            self.now_data['xing_cheng'] = PointField()
 
     def parse_zui_gao(self):
         pre_pharse = self.pre_data["pharse"]
@@ -200,7 +172,8 @@ class QiangLi(BaseParseStyle, MAMixin):
         #  强力点，起点发生改变后，重新开始记录最高点
         if now_pharse == self.p_回调中:
             if pre_pharse == self.p_形成前:
-                self.now_data["zui_gao"] = self.ql.now_data['high_point']
+                date, stock_data = self.high('high', self.ql.now_data['start'].date, self.now_data['xing_cheng'].date)
+                self.now_data["zui_gao"] = PointField(stock_data['high'], stock_data, date)
             else:
                 if self.now_k_data['high'] > self.now_data["zui_gao"].price:
                     self.now_data["zui_gao"] = PointField(self.now_k_data['high'])
