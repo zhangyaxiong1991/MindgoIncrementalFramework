@@ -6,7 +6,7 @@ from styles.wish_dynamics.power_form import QLPoints, QiangLi
 def init(account):
     # 设置要交易的证券(600519.SH 贵州茅台)
     account.security = '000001.SH'
-    s = Styles('000001.SH', ['600023.SH'], datetime.datetime.strptime('20190603', "%Y%m%d"))
+    s = Styles('000001.SH', ['600004.SH'], datetime.datetime.strptime('20190603', "%Y%m%d"))
     s.regist([QiangLi])
     account.styles = s
 

@@ -186,7 +186,6 @@ class QiangLi(BaseParseStyle, MAMixin):
 
     def set_pre_data(self):
         self.pre_data["pharse"] = self.now_data["pharse"].data
-        log.info("{}".format(self))
 
     def __str__(self):
         return "阶段:{}, 形成:{}, 最高:{}, 到位:{}".format(self.now_data['pharse'], self.now_data['xing_cheng'],
