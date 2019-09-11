@@ -68,8 +68,11 @@ class BaseParseStyle(Style):
             self.pre_data = self.stocks_pre_data.get(stock, {})
             for name in self.__fields__:
                 getattr(self, 'parse_' + name)()
-                log.info("{} parse {} {}, result is {}".format(self.now_stock, self.__name__,
-                                                               name, self.now_data[name]))
+                log.info("{} parse {} {}".format(self.now_stock, self.__name__, name))
+            log_str = 'result is '
+            for name in self.__fields__:
+                log_str += "{}: {}, ".format(name, self.now_data[name])
+            log.info(log_str)
         self.set_pre_data()
         self.stocks_pre_data[stock] = self.pre_data
         self.check_result(stock)
