@@ -23,7 +23,7 @@ class DPoint(BaseParseStyle, MAMixin):
     def init_first_day_data(self, stock, time, k_data):
         result = {}
         result["pharse"] = DataField(self.已形成)
-        result["all_d_point"] = DataField([])
+        result["all_d_points"] = DataField([])
         start = PointField()
         start.open = k_data['open'] / (1 + D_POINT_LENGTH)
         result['now_d_point'] = DataField([start, PointField()])
@@ -40,21 +40,22 @@ class DPoint(BaseParseStyle, MAMixin):
         # pharse 用到is ready 提前计算
         if self.now_k_data['high'] > self.MA(200) and self.now_k_data['high'] > self.MA(50) and \
                 self.now_k_data['high'] > self.MA(10) or self.now_k_data['high'] > self.MA(20):
-            self.now_data["is_ready"] = True
+            self.now_data["is_ready"].data = True
 
         # D类失效导致起点更新，会影响判断D类形成，提前计算
-        if self.now_data['all_d_point'].data:
+        if self.now_data['all_d_points'].data:
             # 如果收盘加超过最后（最低）一个D类，则从后往前遍历所有D类，删除被覆盖的D类，并记录所有D类的起点，
             # 选出最低的起点再与当前起点比较，如果更低则替换
-            if self.now_k_data['close'] >= self.now_data['all_d_point'].data[-1][1].close:
-                low_start = self.now_data['all_d_point'].data[-1][0]
-                for n, d_point in enumerate(self.now_data['all_d_point'].data[:-1]):
-                    d_point = self.now_data['all_d_point'].data[-(n+2)]
+            if self.now_k_data['close'] >= self.now_data['all_d_points'].data[-1].data[1].close:
+                low_start = self.now_data['all_d_points'].data[-1].data[0]
+                n = 0
+                for n, d_point in enumerate(self.now_data['all_d_points'].data[:-1]):
+                    d_point = self.now_data['all_d_points'].data[-(n+2)]
                     if d_point.data[0].open < low_start.open:
                         low_start = d_point.data[0]
                     else:
                         break
-                self.now_data['all_d_point'].data = self.now_data['all_d_point'].data[:-(n+1)]
+                self.now_data['all_d_points'].data = self.now_data['all_d_points'].data[:-(n+1)]
                 if self.now_data['start_point'] is not None:
                     # 如果start是None说明已经形成D类，下次到达50 200 日线下时形成新的起点
                     if low_start.open < self.now_data['start_point'].open:
@@ -62,7 +63,7 @@ class DPoint(BaseParseStyle, MAMixin):
 
         if yt_pharse == self.已形成:
             if self.now_k_data['high'] < self.MA(200) or self.now_k_data['high'] < self.MA(50):
-                self.now_data['parse'].data = self.均线下
+                self.now_data['pharse'].data = self.均线下
 
                 self.now_data['all_d_points'].data.append(self.now_data['now_d_point'])
                 self.now_data['start_point'] = PointField()
@@ -70,20 +71,20 @@ class DPoint(BaseParseStyle, MAMixin):
                 self.now_data['now_d_point'] = None
 
         else:
-            if self.now_k_data['is_ready'].data:
+            if self.now_data['is_ready'].data:
                 if self.now_k_data['close'] > self.MA(200) and self.now_k_data['close'] > self.MA(50):
                     if self.now_k_data['close'] / self.now_data["start_point"].open >= (1 + D_POINT_LENGTH):
-                        self.now_data['parse'] = self.已形成
+                        self.now_data['pharse'].data = self.已形成
 
                         self.now_data['now_d_point'] = DataField([self.now_data["start_point"], PointField()])
                         self.now_data['start_point'] = None
 
             elif self.now_k_data['high'] < self.MA(200) or self.now_k_data['high'] < self.MA(50):
-                self.now_data['parse'].data = self.均线下
+                self.now_data['pharse'].data = self.均线下
             elif self.now_k_data['high'] > self.MA(200) or self.now_k_data['high'] > self.MA(50):
-                self.now_data['parse'].data = self.均线上
+                self.now_data['pharse'].data = self.均线上
             else:
-                self.now_data['parse'].data = self.均线中
+                self.now_data['pharse'].data = self.均线中
 
     def parse_start_point(self):
         """
@@ -119,9 +120,12 @@ class DPoint(BaseParseStyle, MAMixin):
             if self.now_k_data["close"] > self.now_data['now_d_point'].data[0].close:
                 self.now_data['now_d_point'].data[1] = PointField()
 
-    def parse_all_d_point(self):
+    def parse_all_d_points(self):
         """
         如果收盘加超过最后（最低）一个D类，则从后往前遍历所有D类，删除被覆盖的D类，并记录所有D类的起点，
         选出最低的起点再与当前起点比较，如果更低则替换
         :return:
         """
+
+    def set_pre_data(self):
+        self.pre_data['pre_pharse'] = self.now_data['pharse'].data

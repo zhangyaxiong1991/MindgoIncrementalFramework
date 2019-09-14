@@ -1,10 +1,6 @@
 # coding:utf-8
-# 形态（style）：增量框架支持的最原始的计算器，自己处理复权，自己处理数据
-# 分析形态（ParseStyle）：基于形态开发，提前定义出用到的字段、个字段的计算方法单独定义，对于复杂策略，计算模块划分更清晰
-# 实现方式：框架提供字段，各字段已写好了处理复权的函数，并提供一些方便的方法。BaseParseStyle在处理数据时，搜索所有字段，
-# 调用对应字段的计算函数，各计算函数通过存储的前一天的数据，以及当天已计算的字段的数据计算当天剩余字段的数据。
-# 计算前框架负责填充前一天的数据 -- 将数据复制到对应字段，计算后存储对应数据
 
+import traceback
 
 from mindform.basestyle import Style, BaseField
 
@@ -64,11 +60,12 @@ class BaseParseStyle(Style):
         self.now_data = self.stocks_data.get(stock, None)
         if self.now_data is None:
             self.now_data = self.init_first_day_data(stock, time, k_data)
+
         else:
             self.pre_data = self.stocks_pre_data.get(stock, {})
             for name in self.__fields__:
-                getattr(self, 'parse_' + name)()
                 log.info("{} parse {} {}".format(self.now_stock, self.__name__, name))
+                getattr(self, 'parse_' + name)()
             log_str = 'result is '
             for name in self.__fields__:
                 log_str += "{}: {}, ".format(name, self.now_data[name])

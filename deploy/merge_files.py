@@ -10,8 +10,14 @@ if __name__ == '__main__':
     finder = ModuleFinder(encoding='utf-8', root_path=r'D:\code\MindgoIncrementalFramework')
     target = r'D:\code\MindgoIncrementalFramework\policys\test01.py'
     finder.load_file(target)
+    merge_file = """# coding:utf-8
+from collections import OrderedDict, Sequence
 
-    merge_file = ''
+import pandas as pd
+import datetime
+import traceback
+    """
+
     for file in reversed(finder.paths):
         with open(file, encoding='utf-8') as f:
             for line in f:
