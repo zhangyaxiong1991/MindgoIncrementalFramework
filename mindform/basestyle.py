@@ -2,28 +2,118 @@
 
 from collections import OrderedDict
 
+
+class BaseField:
+    pass
+
+
 class StyleField:
     """
     配置类，配置字段属性
     """
     _index = 1
 
-    def __init__(self, field_class, many=False):
+    def __init__(self, field_class, many=False, handle_rights_items=None):
         self.field_class = field_class
         self.many = many
-        if hasattr(self.field_class, "handle_rights"):
-            self.handle_rights = True
-        else:
-            self.handle_rights = False
+        self.handle_rights_items = handle_rights_items
         self._index = StyleField._index
         StyleField._index += 1
 
+    def is_handle_rights(self):
+        if isinstance(self.field_class, BaseField):
+            if hasattr(self.field_class, 'handle_rights'):
+                return True
+            if self.field_class.handle_rights_items is not None:
+                return True
+            return False
+        elif isinstance(self.field_class, StyleField):
+            return self.field_class.is_handle_rights()
+        return False
+
+    def base_field_handle_rights(self, field_data, all_history_data):
+        if self.handle_rights_items is not None:
+            for item in self.handle_rights_items(field_data):
+                item.handle_rights(all_history_data)
+        else:
+            field_data.handle_rights(all_history_data)
+
+    def handle_field_data_rights(self, parse_style, field_data, all_history_data):
+        check = isinstance
+        if isinstance(self.field_class, type):
+            check = issubclass
+        if check(self.field_class, (StyleField, )):
+            self.field_class.handle_rights(parse_style, field_data, all_history_data)
+        elif check(self.field_class, (BaseField, )):
+            self.base_field_handle_rights(field_data, all_history_data)
+        else:
+            raise Exception('field must be BaseField or StyleField but not {}'.format(type(self.field_class)))
+
+    def handle_rights(self, parse_style, field_data, all_history_data):
+        if field_data is None:
+            return
+        if not self.is_handle_rights():
+            return
+        if self.many:
+            if isinstance(field_data, dict):
+                for k, item in field_data:
+                    self.handle_field_data_rights(parse_style, item, all_history_data)
+            elif isinstance(field_data, (list, set)):
+                for item in field_data:
+                    self.handle_field_data_rights(parse_style, item, all_history_data)
+            else:
+                raise Exception("if many is True data must be dict、list or set but not {}".format(type(field_data)))
+        else:
+            self.handle_field_data_rights(parse_style, field_data, all_history_data)
+
+    def base_field_format_str(self, field_data):
+        result = ""
+        if self.handle_rights_items is not None:
+            for item in self.handle_rights_items(field_data):
+                result += str(item)
+                result += ','
+        else:
+            result = str(field_data)
+        return result
+
+    def format_field_data_str(self, field_data):
+        check = isinstance
+        if isinstance(self.field_class, type):
+            check = issubclass
+        if check(self.field_class, BaseField):
+            return self.base_field_format_str(field_data)
+        elif check(self.field_class, StyleField):
+            return self.field_class.format_str(field_data)
+        else:
+            raise Exception('field must be BaseField or StyleField but not {}'.format(type(self.field_class)))
+
+    def format_str(self, field_data):
+        if field_data is None:
+            return 'None'
+        result = ''
+        if self.many:
+            if isinstance(field_data, dict):
+                result += '{'
+                for k, item in field_data:
+                    result += (str(k) + ": ")
+                    result += self.format_field_data_str(item)
+                    result += ","
+                result += '}'
+            elif isinstance(field_data, (list, set)):
+                result += '['
+                for item in field_data:
+                    result += self.format_field_data_str(item)
+                    result += ","
+                result += ']'
+            else:
+                raise Exception("if many is True data must be dict、list or set but not {}".format(type(field_data)))
+        else:
+            result = self.format_field_data_str(field_data)
+        return result
+
+
     def __set_styles__(self, styles):
         self.field_class.styles = styles
-
-
-class BaseField:
-    pass
 
 
 class BaseMeta(object):

@@ -45,6 +45,7 @@ class ModuleFinder:
 
     def load_file(self, pathname):
         fp = open(pathname, encoding=self.encoding)
+        print("load_file: {}".format(pathname))
         if pathname == 'D:\\code\\MindgoIncrementalFramework\\styles\\parse_style.py':
             pass
         co = compile(fp.read() + '\n', pathname, 'exec')

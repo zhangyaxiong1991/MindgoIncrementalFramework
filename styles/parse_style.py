@@ -2,6 +2,7 @@
 
 import traceback
 
+from collections import Iterable
 from mindform.basestyle import Style, BaseField
 
 
@@ -40,15 +41,8 @@ class BaseParseStyle(Style):
             raise Exception("ParseStyle中个股数据必须存储为dict，当前为:{}".format(type(stock_data)))
         for name in self.__fields__:
             style_field = self.__fields__[name]
-            stock_field_data = stock_data.get(name)
-            if stock_field_data is None:
-                continue
-            if style_field.handle_rights:
-                if style_field.many:
-                    for data in stock_field_data:
-                        data.handle_rights(all_history_data)
-                else:
-                    stock_field_data.handle_rights(all_history_data)
+            field_data = stock_data.get(name)
+            style_field.handle_rights(self, field_data, all_history_data)
 
     def handle_data(self, stock, time, k_data):
         self.now_stock = stock
@@ -68,7 +62,7 @@ class BaseParseStyle(Style):
                 getattr(self, 'parse_' + name)()
             log_str = 'result is '
             for name in self.__fields__:
-                log_str += "{}: {}, ".format(name, self.now_data[name])
+                log_str += "{}: {}, ".format(name, self.__fields__[name].format_str(self.now_data[name]))
             log.info(log_str)
         self.set_pre_data()
         self.stocks_pre_data[stock] = self.pre_data
@@ -139,10 +133,9 @@ class PointField(BaseField):
         factor = self.close / self.pre_close
         if self.price is not None:
             self.price = self.pre_price * factor
-        if self._store_k_data:
-            self.open = all_history_data.loc[self.date]['open']
-            self.high = all_history_data.loc[self.date]['high']
-            self.low = all_history_data.loc[self.date]['low']
+        self.open = all_history_data.loc[self.date]['open']
+        self.high = all_history_data.loc[self.date]['high']
+        self.low = all_history_data.loc[self.date]['low']
 
     def __cmp__(self, other):
         return self.price.__cmp__(other.price)
@@ -156,4 +149,6 @@ class DataField(BaseField):
         self.data = data
 
     def __str__(self):
+        if isinstance(self.data, Iterable):
+            return ",".join([str(i) for i in self.data])
         return "{}".format(self.data)
