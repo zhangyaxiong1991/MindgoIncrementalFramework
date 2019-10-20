@@ -156,6 +156,8 @@ class Styles(object):
                     self.last_two_days_data = get_candle_stick(all_stocks + [self._driver], self.td.strftime("%Y%m%d"),
                                                                fre_step="1d", fields=self.fileds,
                                                                skip_paused=True, bar_count=1)
+                    # 剔除掉还未上市的个股
+                    self.last_two_days_data = {k: v for k, v in self.last_two_days_data.items() if not len(v.index) == 0}
                     self.stocks_cache_data = self.last_two_days_data
                 else:
                     log.info("超过起始时间，请求两天的数据")

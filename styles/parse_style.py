@@ -4,6 +4,7 @@ import traceback
 
 from collections import Iterable
 from mindform.basestyle import Style, BaseField
+from mindform.style import StyleField
 
 
 class BaseParseStyle(Style):
@@ -52,11 +53,11 @@ class BaseParseStyle(Style):
                 raise Exception('个股：{} 在日期：{}的数据重复计算'.format(stock, time))
         self.date = time
         self.now_data = self.stocks_data.get(stock, None)
+        self.pre_data = self.stocks_pre_data.get(stock, {})
         if self.now_data is None:
             self.now_data = self.init_first_day_data(stock, time, k_data)
 
         else:
-            self.pre_data = self.stocks_pre_data.get(stock, {})
             for name in self.__fields__:
                 log.info("{} parse {} {}".format(self.now_stock, self.__name__, name))
                 getattr(self, 'parse_' + name)()
@@ -88,6 +89,26 @@ class BaseParseStyle(Style):
 
     def init_first_day_data(self, stock, time, k_data):
         return self.init_first_row(k_data)
+
+    def __getattribute__(self, item):
+        if item in super(BaseParseStyle, self).__getattribute__('__fields__'):
+            return super(BaseParseStyle, self).__getattribute__('now_data')[item]
+
+        if item.startswith('pre_'):
+            if item[4:] in super(BaseParseStyle, self).__getattribute__('__fields__'):
+                return super(BaseParseStyle, self).__getattribute__('pre_data').get(item)
+
+        return super(BaseParseStyle, self).__getattribute__(item)
+
+    def __setattr__(self, item, value):
+        if item in self.__fields__:
+            self.now_data[item] = value
+
+        if item.startswith('pre_'):
+            if item[5:] in self.__fields__:
+                self.pre_data[item] = value
+
+        return super(BaseParseStyle, self).__setattr__(item, value)
 
     def __set_styles__(self, styles):
         super(BaseParseStyle, self).__set_styles__(styles)
@@ -152,3 +173,10 @@ class DataField(BaseField):
         if isinstance(self.data, Iterable):
             return ",".join([str(i) for i in self.data])
         return "{}".format(self.data)
+
+
+class PharseParseStyle(BaseParseStyle):
+    pharse = StyleField(DataField)
+
+    def set_pre_data(self):
+        self.pre_data["pre_pharse"] = self.now_data['pharse'].data

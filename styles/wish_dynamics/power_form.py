@@ -98,6 +98,11 @@ class QiangLi(BaseParseStyle, MAMixin):
     p_收阳 = 60
     p_阴2 = 70
 
+    p_到位阶段 = [p_阴到位, p_阳到位]
+
+    p_到位 = 80
+    p_到位后 = 81
+
     # 计算前会有计算框架注入对应的实例
     ql = QLPoints()
 
@@ -125,36 +130,16 @@ class QiangLi(BaseParseStyle, MAMixin):
 
         elif yt_pharse == self.p_回调中:
             if self.ql.now_data["pharse"].data < QLPoints.UP_MA10:
-                if self.now_k_data['close'] < self.now_k_data['open']:
-                    self.now_data["pharse"].data = self.p_阴到位
-                else:
-                    self.now_data["pharse"].data = self.p_阳到位
+                self.pharse.data = self.p_到位
 
-        elif yt_pharse in (self.p_阴到位, self.p_收阳前):
-            if self.向下跳空() or self.阴加速():
-                self.now_data["pharse"].data = self.p_形成前
-
-            elif self.now_k_data['close'] > self.now_k_data['open']:
-                self.now_data["pharse"].data = self.p_收阳
-
+        elif yt_pharse == self.p_到位:
+            if self.ql.pharse.data == QLPoints.DOWN_MA10:
+                self.pharse.data = self.p_形成前
             else:
-                self.now_data["pharse"].data = self.p_收阳前
-
-        elif yt_pharse in (self.p_阳到位, self.p_收阳):
-            if self.向下跳空() or self.阴加速():
-                self.now_data["pharse"].data = self.p_形成前
-
-            elif self.阴线():
-                if self.now_k_data['high'] >= self.MA(10):
-                    self.now_data["pharse"].data = self.p_阴2
-                else:
-                    self.now_data["pharse"].data = self.p_形成前
-            else:
-                self.now_data["pharse"].data = self.p_收阳
-
-        elif yt_pharse == self.p_阴2:
-            self.now_data["pharse"].data = self.p_形成前
-
+                self.pharse.data = self.p_到位后
+        elif yt_pharse == self.p_到位后:
+            if self.ql.pharse.data == QLPoints.DOWN_MA10:
+                self.pharse.data = self.p_形成前
         else:
             raise Exception("强力形态位置阶段：{}".format(yt_pharse))
 
@@ -187,9 +172,70 @@ class QiangLi(BaseParseStyle, MAMixin):
     def set_pre_data(self):
         self.pre_data["pharse"] = self.now_data["pharse"].data
 
-    def __str__(self):
-        return "阶段:{}, 形成:{}, 最高:{}, 到位:{}".format(self.now_data['pharse'], self.now_data['xing_cheng'],
-                                                   self.now_data['zui_gao'], self.now_data['dao_wei'])
 
+class QiangLi2(PharseParseStyle, MAMixin):
+    ql = QLPoints()
+    p_xing_cheng = QiangLi()
 
+    p_到位前 = 0
+    p_阴到位 = 40  # 阴到位，正常发展最终会发展为阳到位
+    p_收阳前 = 41
+    p_阳到位 = 50
+    p_收阳 = 60
+    p_阴2 = 70
 
+    pharse = StyleField(DataField)
+    xing_cheng = StyleField(PointField)
+    zui_gao = StyleField(PointField)
+    dao_wei = StyleField(PointField)
+
+    def init_first_row(self, first_day_stock_data):
+        result = {}
+        result['pharse'] = DataField(self.p_到位前)
+        result["xing_cheng"] = None
+        result["zui_gao"] = None
+        result["dao_wei"] = None
+        return result
+
+    def parse_pharse(self):
+        if self.p_xing_cheng.pharse.data == QiangLi.p_到位:
+            if self.now_k_data['close'] < self.now_k_data['open']:
+                self.pharse.data = self.p_阴到位
+            else:
+                self.pharse.data = self.p_阳到位
+        elif self.pre_pharse in (self.p_阴到位, self.p_收阳前):
+            if self.向下跳空() or self.阴加速():
+                self.pharse.data = self.p_到位前
+
+            elif self.now_k_data['close'] > self.now_k_data['open']:
+                self.pharse.data = self.p_收阳
+
+            else:
+                self.pharse.data = self.p_收阳前
+
+        elif self.pre_pharse in (self.p_阳到位, self.p_收阳):
+            if self.向下跳空() or self.阴加速():
+                self.pharse.data = self.p_到位前
+
+            elif self.阴线():
+                if self.now_k_data['high'] >= self.MA(10):
+                    self.pharse.data = self.p_阴2
+                else:
+                    self.pharse.data = self.p_到位前
+            else:
+                self.pharse.data = self.p_收阳
+
+        elif self.pre_pharse == self.p_阴2:
+            self.pharse.data = self.p_到位前
+
+    def parse_xing_cheng(self):
+        if self.pharse in [self.p_阳到位, self.p_阴到位]:
+            self.xing_cheng = self.p_xing_cheng.xing_cheng
+
+    def parse_zui_gao(self):
+        if self.pharse in [self.p_阳到位, self.p_阴到位]:
+            self.zui_gao = self.p_xing_cheng.zui_gao
+
+    def parse_dao_wei(self):
+        if self.pharse in [self.p_阳到位, self.p_阴到位]:
+            self.dao_wei = self.p_xing_cheng.dao_wei
