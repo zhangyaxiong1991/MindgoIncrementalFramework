@@ -21,75 +21,67 @@ class QLPoints(BaseParseStyle, MAMixin):
         DOWN_MA10: '向下脱离10日线'
     }
 
-    pharse = StyleField(DataField)
-    dynamic_force_start = StyleField(DataField)
+    pharse = StyleField(int)
+    dynamic_force_start = StyleField(PointField)
     force_start = StyleField(PointField)
     start = StyleField(PointField)
 
-    def init_first_row(self, first_day_stock_data):
-        d = {}
-        d["pharse"] = DataField(self.CROSS_MA10)
-        d["start"] = PointField(first_day_stock_data["open"])
+    def init_first_row(self, first_row_data, first_day_stock_data):
+        first_row_data.pharse = self.CROSS_MA10
+        first_row_data.start = PointField(first_day_stock_data.open)
 
-        d["dynamic_force_start"] = None
-        d["force_start"] = None
-        if first_day_stock_data["close"] > first_day_stock_data["open"]:
-            d["dynamic_force_start"] = PointField(first_day_stock_data["open"])
-            d["force_start"] = PointField(first_day_stock_data["open"])
-
-        return d
+        first_row_data.dynamic_force_start = None
+        first_row_data.force_start = None
+        if first_day_stock_data.close > first_day_stock_data.open:
+            first_row_data.dynamic_force_start = PointField(first_day_stock_data.open)
+            first_row_data.force_start = PointField(first_day_stock_data.open)
 
     def parse_pharse(self):
         ma = self.MA(10)
-        if self.now_k_data["low"] > ma:
-            self.now_data["pharse"].data = self.UP_MA10
-        elif self.now_k_data["high"] < ma:
-            self.now_data["pharse"].data = self.DOWN_MA10
+        if self.now_k_data.low > ma:
+            self.now_data.pharse = self.UP_MA10
+        elif self.now_k_data.high < ma:
+            self.now_data.pharse = self.DOWN_MA10
         else:
-            self.now_data["pharse"].data = self.CROSS_MA10
+            self.now_data.pharse = self.CROSS_MA10
 
     def parse_dynamic_force_start(self):
-        td_pharse = self.now_data["pharse"].data
-        yt_pharse = self.pre_data["pre_pharse"]
-
         # 收阴线，则无条件绝对起点结束
-        if self.now_k_data["close"] < self.now_k_data["open"]:
-            self.now_data["dynamic_force_start"] = None
+        if self.now_k_data.close < self.now_k_data.open:
+            self.now_data.dynamic_force_start = None
         else:
-            if self.now_data["dynamic_force_start"] is None:
-                self.now_data["dynamic_force_start"] = PointField(self.now_k_data["open"])
+            if self.now_data.dynamic_force_start is None:
+                self.now_data.dynamic_force_start = PointField(self.now_k_data.open)
 
             # 收阳但未绝对向上，则充值动态绝对起点
-            elif not (self.now_k_data["close"] > self.pre_k_data["close"] and self.now_k_data["high"] > self.pre_k_data[
-                    "high"] and self.now_k_data["open"] > self.pre_k_data["open"]):
-                self.now_data["dynamic_force_start"] = PointField(self.now_k_data["open"])
+            elif not (self.now_k_data.close > self.pre_k_data.close and self.now_k_data.high > self.pre_k_data.high \
+                      and self.now_k_data.open > self.pre_k_data.open):
+                self.now_data.dynamic_force_start = PointField(self.now_k_data.open)
 
     def parse_force_start(self):
-        td_pharse = self.now_data["pharse"].data
-        yt_pharse = self.pre_data["pre_pharse"]
-
-        if td_pharse < self.UP_MA10 and yt_pharse == self.UP_MA10:
-            self.now_data["force_start"] = self.now_data['dynamic_force_start']
+        if self.now_data.pharse < self.UP_MA10 and self.pre_data.pharse == self.UP_MA10:
+            self.now_data.force_start = self.now_data.dynamic_force_start
 
     def parse_start(self):
-        td_pharse = self.now_data["pharse"].data
-        yt_pharse = self.pre_data["pre_pharse"]
-
-        if td_pharse < self.UP_MA10 and yt_pharse == self.UP_MA10:
-            if self.now_data["force_start"] is None:
-                self.now_data["start"] = PointField(self.now_k_data["open"])
+        if self.now_data.pharse < self.UP_MA10 and self.pre_data.pharse == self.UP_MA10:
+            if self.now_data.force_start is None:
+                self.now_data.start = PointField(self.now_k_data.open)
             else:
-                self.now_data["start"] = self.now_data["force_start"]
+                self.now_data.start = self.now_data.force_start
         else:
-            if self.now_k_data["open"] < self.now_data["start"].price:
-                self.now_data["start"] = PointField(self.now_k_data["open"])
+            if self.now_k_data.open < self.now_data.start.price:
+                self.now_data.start = PointField(self.now_k_data.open)
 
     def set_pre_data(self):
-        self.pre_data["pre_pharse"] = self.now_data["pharse"].data
-        log.info("pharse:{}, start:{}, force_start:{}".format(self.now_data["pharse"].data,
-                                                              self.now_data["start"], self.now_data['force_start']))
+        super(QLPoints, self).set_pre_data()
+        log.info("pharse:{}, start:{}, force_start:{}".format(self.now_data.pharse,
+                                                              self.now_data.start, self.now_data['force_start']))
+
 
 class QiangLi(BaseParseStyle, MAMixin):
+    """
+    强力形态拆成两部分，因为第一部分结束后就可以重新循环
+    """
     p_形成前 = 10 # 形成前
     p_回调中 = 30 # 下跌中，创新高则变回FORMING
     p_阴到位 = 40 # 阴到位，正常发展最终会发展为阳到位
@@ -111,66 +103,53 @@ class QiangLi(BaseParseStyle, MAMixin):
     zui_gao = StyleField(PointField)
     dao_wei = StyleField(PointField)
 
-    def init_first_row(self, first_day_stock_data):
-        d = {}
-        d["pharse"] = DataField(self.p_形成前)
-        d["xing_cheng"] = None
-        d["zui_gao"] = None
-        d["dao_wei"] = None
-        return d
+    def init_first_row(self, first_row_data, first_day_stock_data):
+        first_row_data.pharse = self.p_形成前
+        first_row_data.xing_cheng = None
+        first_row_data.zui_gao = None
+        first_row_data.dao_wei = None
 
     def parse_pharse(self):
-        yt_pharse = self.pre_data["pharse"]
-
-        if yt_pharse == self.p_形成前:
-            if self.ql.now_data["pharse"].data == QLPoints.UP_MA10:
+        if self.pre_data.pharse == self.p_形成前:
+            if self.ql.now_data.pharse == QLPoints.UP_MA10:
                 if self.up_break_mas([10, 20, 50, 200]):
-                    if self.now_k_data["close"] / self.ql.now_data["start"].price >= 1.18:
-                        self.now_data["pharse"].data = self.p_回调中
+                    if self.now_k_data.close / self.ql.now_data.start.price >= 1.18:
+                        self.now_data.pharse = self.p_回调中
 
-        elif yt_pharse == self.p_回调中:
-            if self.ql.now_data["pharse"].data < QLPoints.UP_MA10:
+        elif self.pre_data.pharse == self.p_回调中:
+            if self.ql.now_data.pharse < QLPoints.UP_MA10:
                 self.pharse.data = self.p_到位
 
-        elif yt_pharse == self.p_到位:
+        elif self.pre_data.pharse == self.p_到位:
             if self.ql.pharse.data == QLPoints.DOWN_MA10:
                 self.pharse.data = self.p_形成前
             else:
                 self.pharse.data = self.p_到位后
-        elif yt_pharse == self.p_到位后:
+        elif self.pre_data.pharse == self.p_到位后:
             if self.ql.pharse.data == QLPoints.DOWN_MA10:
                 self.pharse.data = self.p_形成前
         else:
-            raise Exception("强力形态位置阶段：{}".format(yt_pharse))
+            raise Exception("强力形态位置阶段：{}".format(self.pre_data.pharse))
 
     def parse_xing_cheng(self):
-        pre_pharse = self.pre_data["pharse"]
-        now_pharse = self.now_data["pharse"].data
-
-        if pre_pharse == self.p_形成前 and now_pharse == self.p_回调中:
-            self.now_data['xing_cheng'] = PointField()
+        if self.pre_data.pharse == self.p_形成前 and self.now_data.pharse == self.p_回调中:
+            self.now_data.xing_cheng = PointField()
 
     def parse_zui_gao(self):
-        pre_pharse = self.pre_data["pharse"]
-        now_pharse = self.now_data["pharse"].data
-
         #  强力点，起点发生改变后，重新开始记录最高点
-        if now_pharse == self.p_回调中:
-            if pre_pharse == self.p_形成前:
-                date, stock_data = self.high('high', self.ql.now_data['start'].date, self.now_data['xing_cheng'].date)
-                self.now_data["zui_gao"] = PointField(stock_data['high'], stock_data, date)
+        if self.now_data.pharse == self.p_回调中:
+            if self.pre_data.pharse == self.p_形成前:
+                date, stock_data = self.high('high', self.ql.now_data.start.date, self.now_data.xing_cheng.date)
+                self.now_data.zui_gao = PointField(stock_data.high, stock_data, date)
             else:
-                if self.now_k_data['high'] > self.now_data["zui_gao"].price:
-                    self.now_data["zui_gao"] = PointField(self.now_k_data['high'])
+                if self.now_k_data.high > self.now_data.zui_gao.price:
+                    self.now_data.zui_gao = PointField(self.now_k_data.high)
 
     def parse_dao_wei(self):
-        now_pharse = self.now_data["pharse"].data
+        self.now_data.pharse = self.now_data.pharse
 
-        if now_pharse in (self.p_阳到位, self.p_阴到位):
-            self.now_data['dao_wei'] = PointField()
-
-    def set_pre_data(self):
-        self.pre_data["pharse"] = self.now_data["pharse"].data
+        if self.now_data.pharse in (self.p_阳到位, self.p_阴到位):
+            self.now_data.dao_wei = PointField()
 
 
 class QiangLi2(PharseParseStyle, MAMixin):
@@ -189,17 +168,15 @@ class QiangLi2(PharseParseStyle, MAMixin):
     zui_gao = StyleField(PointField)
     dao_wei = StyleField(PointField)
 
-    def init_first_row(self, first_day_stock_data):
-        result = {}
-        result['pharse'] = DataField(self.p_到位前)
-        result["xing_cheng"] = None
-        result["zui_gao"] = None
-        result["dao_wei"] = None
-        return result
+    def init_first_row(self, first_row_data, first_day_stock_data):
+        first_row_data.pharse = DataField(self.p_到位前)
+        first_row_data.xing_cheng = None
+        first_row_data.zui_gao = None
+        first_row_data.dao_wei = None
 
     def parse_pharse(self):
         if self.p_xing_cheng.pharse.data == QiangLi.p_到位:
-            if self.now_k_data['close'] < self.now_k_data['open']:
+            if self.now_k_data.close < self.now_k_data.open:
                 self.pharse.data = self.p_阴到位
             else:
                 self.pharse.data = self.p_阳到位
@@ -207,7 +184,7 @@ class QiangLi2(PharseParseStyle, MAMixin):
             if self.向下跳空() or self.阴加速():
                 self.pharse.data = self.p_到位前
 
-            elif self.now_k_data['close'] > self.now_k_data['open']:
+            elif self.now_k_data.close > self.now_k_data.open:
                 self.pharse.data = self.p_收阳
 
             else:
@@ -218,7 +195,7 @@ class QiangLi2(PharseParseStyle, MAMixin):
                 self.pharse.data = self.p_到位前
 
             elif self.阴线():
-                if self.now_k_data['high'] >= self.MA(10):
+                if self.now_k_data.high >= self.MA(10):
                     self.pharse.data = self.p_阴2
                 else:
                     self.pharse.data = self.p_到位前

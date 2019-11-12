@@ -3,7 +3,7 @@
 import traceback
 
 from collections import Iterable
-from mindform.basestyle import Style, BaseField
+from mindform.basestyle import Style, BaseField, MindFormDict
 from mindform.style import StyleField
 
 
@@ -23,10 +23,22 @@ class BaseParseStyle(Style):
         self.now_stock = None
         self.date = None
 
-    def check_result(self, stock):
-        for name in self.__fields__:
-            if name not in self.now_data:
-                raise Exception('计算个股{}数据时，字段{}未计算'.format(stock, name))
+    def handle_field_data_rights(self, field_data, all_history_data):
+        """
+        形态字段的复权处理函数，
+        :param field_data: 存储在形态中的，当前正在处理的个股的，该字段的值
+        :param all_history_data: 当前正在处理的个股的历史数据
+        :return:
+        """
+        if isinstance(field_data, BaseField):
+            field_data.handle_rights(all_history_data)
+        elif isinstance(field_data, (list, set, tuple)):
+            for i in field_data:
+                self.handle_field_data_rights(i, all_history_data)
+        elif isinstance(field_data, dict):
+            for k, v in field_data:
+                self.handle_field_data_rights(v, all_history_data)
+        return
 
     def handle_rights(self, stock, all_history_data):
         """
@@ -41,9 +53,13 @@ class BaseParseStyle(Style):
         if not isinstance(stock_data, dict):
             raise Exception("ParseStyle中个股数据必须存储为dict，当前为:{}".format(type(stock_data)))
         for name in self.__fields__:
-            style_field = self.__fields__[name]
             field_data = stock_data.get(name)
-            style_field.handle_rights(self, field_data, all_history_data)
+            self.handle_field_data_rights(field_data, all_history_data)
+
+    def check_result(self, stock):
+        for name in self.__fields__:
+            if name not in self.now_data:
+                raise Exception('计算个股{}数据时，字段{}未计算'.format(stock, name))
 
     def handle_data(self, stock, time, k_data):
         self.now_stock = stock
@@ -52,15 +68,17 @@ class BaseParseStyle(Style):
             if time <= stock_date:
                 raise Exception('个股：{} 在日期：{}的数据重复计算'.format(stock, time))
         self.date = time
-        self.now_data = self.stocks_data.get(stock, None)
-        self.pre_data = self.stocks_pre_data.get(stock, {})
+        self.now_data = self.stocks_data.get(stock, MindFormDict())
+        self.pre_data = self.stocks_pre_data.get(stock, MindFormDict())
         if self.now_data is None:
-            self.now_data = self.init_first_day_data(stock, time, k_data)
+            self.now_data = MindFormDict()
+            self.init_first_day_data(self.now_data, time, k_data)
 
         else:
             for name in self.__fields__:
                 log.info("{} parse {} {}".format(self.now_stock, self.__name__, name))
-                getattr(self, 'parse_' + name)()
+                if callable(getattr(self, 'parse_' + name)):
+                    getattr(self, 'parse_' + name)()
             log_str = 'result is '
             for name in self.__fields__:
                 log_str += "{}: {}, ".format(name, self.__fields__[name].format_str(self.now_data[name]))
@@ -75,7 +93,8 @@ class BaseParseStyle(Style):
         由子类继承，在计算完成后调用，用于存储下一天需要用到的数据
         :return:
         """
-        pass
+        self.pre_data = MindFormDict()
+        self.pre_data.pharse = self.now_data.pharse
 
     def set_now_stock(self, stock):
         """
@@ -177,6 +196,3 @@ class DataField(BaseField):
 
 class PharseParseStyle(BaseParseStyle):
     pharse = StyleField(DataField)
-
-    def set_pre_data(self):
-        self.pre_data["pre_pharse"] = self.now_data['pharse'].data

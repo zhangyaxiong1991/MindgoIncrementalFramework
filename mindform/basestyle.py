@@ -4,15 +4,25 @@ from collections import OrderedDict
 
 
 class BaseField:
-    pass
+    def handle_rights(self, all_history_data):
+        """
+        处理复权
+        :param all_history_data:
+        :return:
+        """
 
 
 class StyleField:
     """
-    配置类，配置字段属性
+    配置类，不处理数据
+
+    形态由字段组成，字段由StyleField定义，框架收集所有字段，存储，并在计算时调用对应的计算函数
+    字段内可能有三种类型的数据：
+    BaseField  -- 有特有的除权方法
+    Iterable -- dict /  list  -- 需要继续判断各元素的类型
+    其他类型  -- 不需除权
     """
     _index = 1
-
     def __init__(self, field_class, many=False, handle_rights_items=None):
         self.field_class = field_class
         self.many = many
@@ -20,51 +30,12 @@ class StyleField:
         self._index = StyleField._index
         StyleField._index += 1
 
-    def is_handle_rights(self):
-        if isinstance(self.field_class, BaseField):
-            if hasattr(self.field_class, 'handle_rights'):
-                return True
-            if self.field_class.handle_rights_items is not None:
-                return True
-            return False
-        elif isinstance(self.field_class, StyleField):
-            return self.field_class.is_handle_rights()
-        return False
-
     def base_field_handle_rights(self, field_data, all_history_data):
         if self.handle_rights_items is not None:
             for item in self.handle_rights_items(field_data):
                 item.handle_rights(all_history_data)
         else:
             field_data.handle_rights(all_history_data)
-
-    def handle_field_data_rights(self, parse_style, field_data, all_history_data):
-        check = isinstance
-        if isinstance(self.field_class, type):
-            check = issubclass
-        if check(self.field_class, (StyleField, )):
-            self.field_class.handle_rights(parse_style, field_data, all_history_data)
-        elif check(self.field_class, (BaseField, )):
-            self.base_field_handle_rights(field_data, all_history_data)
-        else:
-            raise Exception('field must be BaseField or StyleField but not {}'.format(type(self.field_class)))
-
-    def handle_rights(self, parse_style, field_data, all_history_data):
-        if field_data is None:
-            return
-        if not self.is_handle_rights():
-            return
-        if self.many:
-            if isinstance(field_data, dict):
-                for k, item in field_data:
-                    self.handle_field_data_rights(parse_style, item, all_history_data)
-            elif isinstance(field_data, (list, set)):
-                for item in field_data:
-                    self.handle_field_data_rights(parse_style, item, all_history_data)
-            else:
-                raise Exception("if many is True data must be dict、list or set but not {}".format(type(field_data)))
-        else:
-            self.handle_field_data_rights(parse_style, field_data, all_history_data)
 
     def base_field_format_str(self, field_data):
         result = ""
@@ -186,3 +157,16 @@ class Style(BaseStyle, metaclass=StyleCreator):
         :return:
         """
         raise Exception('must be override')
+
+
+class MindFormDict(dict):
+    def __getattribute__(self, item):
+        if item in self:
+            return self[item]
+        result = super(MindFormDict, self).__getattribute__(item)
+        if result is None:
+            raise Exception('value error')
+        return result
+
+    def __setattr__(self, key, value):
+        self[key] = value
