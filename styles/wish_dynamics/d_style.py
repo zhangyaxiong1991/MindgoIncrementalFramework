@@ -1,15 +1,16 @@
 # coding:utf-8
 
-from mindform.style import StyleField
-from mindform.basestyle import Style, BaseField
-from styles.parse_style import BaseParseStyle, DataField, PointField, PharseParseStyle
-from styles.wish_dynamics.power_form import QiangLi
+from mindform.style_manager import Field
+from mindform.style import BaseDataType
+from mindform.parse_style import ParseStyle
+from mindform.data_type import Point
+from styles.wish_dynamics.power_form import QiangLiXingCheng
 from mindform.mixins import MAMixin
 
 D_POINT_LENGTH = 0.15
 
 
-class DPointField(BaseField):
+class DPoint(BaseDataType):
     """
     所有已形成的D类高点
     生命周期内有三个阶段：
@@ -27,8 +28,8 @@ class DPointField(BaseField):
         self.status = self.全体现
 
     def _check(self):
-        assert isinstance(self.start, PointField)
-        assert isinstance(self.d_point, PointField)
+        assert isinstance(self.start, Point)
+        assert isinstance(self.d_point, Point)
         assert self.d_point.close / self.start.open >= 1.16
 
     def handle_rights(self, all_history_data):
@@ -36,83 +37,83 @@ class DPointField(BaseField):
         self.d_point.handle_rights(all_history_data)
 
 
-class DPoint(BaseParseStyle, MAMixin):
+class DPoint(ParseStyle, MAMixin):
     已形成 = 3
     均线上 = 2
     均线中 = 0
     均线下 = -2
 
-    pharse = StyleField(int)
-    start_point = StyleField(PointField)
-    now_d_point = StyleField(DPointField)
-    all_d_points = StyleField(DPointField, many=True)
-    is_ready = StyleField(bool)
+    phase = Field(int)
+    start_point = Field(Point)
+    now_d_point = Field(DPoint)
+    all_d_points = Field(DPoint, many=True)
+    is_ready = Field(bool)
 
-    def init_first_day_data(self, first_row_data, time, k_data):
-        first_row_data.pharse = self.已形成
-        first_row_data.all_d_points = []
-        start = PointField()
+    def init_first_day_data(self, time, k_data):
+        self.phase = self.已形成
+        self.all_d_points = []
+        start = Point()
         start.open = k_data.open / (1 + D_POINT_LENGTH)
-        first_row_data.now_d_point = DPointField(start, PointField(), 0)
-        first_row_data.start_point = start
-        first_row_data.is_ready = True  # 是否已经运行到过200 50日线上
+        self.now_d_point = DPoint(start, Point(), 0)
+        self.start_point = start
+        self.is_ready = True  # 是否已经运行到过200 50日线上
 
     def parse_pharse(self):
-        # pharse 用到is ready 提前计算
+        # phase 用到is ready 提前计算
         if self.now_k_data.high > self.MA(200) and self.now_k_data.high > self.MA(50) and \
                 self.now_k_data.high > self.MA(10) or self.now_k_data.high > self.MA(20):
-            self.now_data.is_ready = True
+            self.is_ready = True
 
         # D类失效导致起点更新，会影响判断D类形成，提前计算
-        if self.now_data.all_d_points:
+        if self.all_d_points:
             # 最后一个d类的收盘价是最低的，只有超过了最后一个d类，再去遍历检查
-            if self.now_k_data.close >= self.now_data.all_d_points[-1].point.close:
-                low_start = self.now_data.all_d_points[-1].start
-                for d_point in self.now_data.all_d_points[:-1]:
-                    if d_point.status < DPointField.最高点未体现:
+            if self.now_k_data.close >= self.all_d_points[-1].point.close:
+                low_start = self.all_d_points[-1].start
+                for d_point in self.all_d_points[:-1]:
+                    if d_point.status < DPoint.最高点未体现:
                         if d_point.point.close > self.now_k_data.close:
                             break
 
                         # 以下两种情况的D类高点都已经失效，记录状态该，并比较是否需要更新当前D类高点的起点
                         if d_point.point.high <= self.now_k_data.close:
-                            d_point.status = DPointField.最高点未体现
+                            d_point.status = DPoint.最高点未体现
                         else:
-                            d_point.status = DPointField.收盘价未体现
+                            d_point.status = DPoint.收盘价未体现
                         if d_point.start.open < low_start.open:
                             low_start = d_point.start
 
                 # 如果start是None说明已经形成D类，下次到达50 200 日线下时形成新的起点
-                if self.now_data.start_point is not None:
-                    if low_start.open < self.now_data.start_point.open:
-                        self.now_data.start_point = low_start
+                if self.start_point is not None:
+                    if low_start.open < self.start_point.open:
+                        self.start_point = low_start
 
-        if self.pre_data.pharse == self.已形成:
+        if self.pre_pharse == self.已形成:
             if self.now_k_data.high < self.MA(200) or self.now_k_data.high < self.MA(50):
-                self.now_data.pharse = self.均线下
+                self.phase = self.均线下
 
-                self.now_data.all_d_points = [i for i in self.now_data.all_d_points if i.status == DPointField.全体现]
-                self.now_data.all_d_points.append(self.now_data.now_d_point)
-                self.now_data.start_point = PointField()
-                self.now_data.is_ready = False
-                self.now_data.now_d_point = None
+                self.all_d_points = [i for i in self.all_d_points if i.status == DPoint.全体现]
+                self.all_d_points.append(self.now_d_point)
+                self.start_point = Point()
+                self.is_ready = False
+                self.now_d_point = None
 
         else:
-            if self.now_data.is_ready:
+            if self.is_ready:
                 if self.now_k_data.close > self.MA(200) and self.now_k_data.close > self.MA(50):
-                    if self.now_k_data.close / self.now_data.start_point.open >= (1 + D_POINT_LENGTH):
-                        self.now_data.pharse = self.已形成
+                    if self.now_k_data.close / self.start_point.open >= (1 + D_POINT_LENGTH):
+                        self.phase = self.已形成
 
-                        self.now_data.now_d_point = DPointField(self.now_data.start_point, PointField(), DPointField.全体现)
-                        self.now_data.start_point = None  # 形成后即可删除起点
+                        self.now_d_point = DPoint(self.start_point, Point(), DPoint.全体现)
+                        self.start_point = None  # 形成后即可删除起点
 
             elif self.now_k_data.high < self.MA(200) or self.now_k_data.high < self.MA(50):
-                self.now_data.pharse = self.均线下
+                self.phase = self.均线下
 
             elif self.now_k_data.high > self.MA(200) or self.now_k_data.high > self.MA(50):
-                self.now_data.pharse = self.均线上
+                self.phase = self.均线上
 
             else:
-                self.now_data.pharse = self.均线中
+                self.phase = self.均线中
 
     def parse_start_point(self):
         """
@@ -121,13 +122,11 @@ class DPoint(BaseParseStyle, MAMixin):
         如果创新低，且有起点则更新起点
         :return:
         """
-        td_pharse = self.now_data.pharse
-
         # 不需要再pharse前处理，因为如果发生，一定不会形成，对pharse无影响
         # todo: 有没有可能，比地点低，但是却在50 200 日线上？  应该几乎不会发生
-        if not td_pharse == self.已形成 and self.now_data.all_d_points is not None:
-            if self.now_k_data.open < self.now_data.start_point.open:
-                self.now_data.all_d_points = PointField()
+        if not self.phase == self.已形成 and self.all_d_points is not None:
+            if self.now_k_data.open < self.start_point.open:
+                self.all_d_points = Point()
 
     def parse_now_d_point(self):
         """
@@ -135,31 +134,29 @@ class DPoint(BaseParseStyle, MAMixin):
         D类高点形成后，如果创新高，D类高点也会持续更新
         :return:
         """
-        if self.now_data.pharse == self.已形成:
-            if self.now_k_data.close > self.now_data.now_d_point.point.close:
-                self.now_data.now_d_point.point = PointField()
+        if self.phase == self.已形成:
+            if self.now_k_data.close > self.now_d_point.point.close:
+                self.now_d_point.point = Point()
 
 
-class BaseDStyle(PharseParseStyle, MAMixin):
-    ql = QiangLi()
+class DStyleXingCheng(ParseStyle, MAMixin):
+    qiang_li_xing_cheng = QiangLiXingCheng()
     d_points = DPoint()
 
     p_形成前 = 0
     p_已形成 = 1
     p_到位 = 2
 
-    is_ready = StyleField(DataField)  # 形成前标记是否可形成D类，即是否在D类高点区
-    pharse = StyleField(DataField)
-    d_point = StyleField(PointField, many=True) # D类型对应的D类高点
-    healthy = StyleField(DataField) # 形成阶段是否健康
+    is_ready = Field(bool)  # 形成前标记是否可形成D类，即是否在D类高点区
+    phase = Field(int)
+    d_point = Field(Point, many=True) # D类型对应的D类高点
+    healthy = Field(bool) # 形成阶段是否健康
 
-    def init_first_day_data(self, stock, time, k_data):
-        result = {}
-        result['pharse'] = DataField(self.p_形成前)
-        result['is_ready'] = DataField(False)
-        result['d_point'] = None
-        result['healthy'] = None
-        return result
+    def init_first_day_data(self, time, k_data):
+        self.phase = self.p_形成前
+        self.is_ready = False
+        self.d_point = None
+        self.healthy = None
 
     def parse_is_ready(self):
         """
@@ -167,30 +164,30 @@ class BaseDStyle(PharseParseStyle, MAMixin):
         需要随时判断是否已经失效
         :return:
         """
-        if not self.is_ready.data or self.now_k_data.close >= self.d_point[1].high:
+        if not self.is_ready or self.now_k_data.close >= self.d_point[1].high:
             found = False
             for i in self.d_points.all_d_points[-1::-1]:
-                if i[2].data == DPoint.最高点未体现:
+                if i[2] == DPoint.最高点未体现:
                     continue
                 if self.now_k_data.high >= i[1].close and not self.now_k_data.close >= i[1].high:
-                    self.is_ready.data = True
+                    self.is_ready = True
                     found = True
             if not found:
-                self.is_ready.data = False
+                self.is_ready = False
 
     def parse_pharse(self):
-        if self.ql.pharse == self.ql.p_回调中:
-            if self.is_ready.data:
-                self.pharse = self.p_已形成
-        if self.ql.pharse in self.ql.p_到位阶段:
+        if self.qiang_li_xing_cheng.phase == self.qiang_li_xing_cheng.p_回调中:
+            if self.is_ready:
+                self.phase = self.p_已形成
+        if self.qiang_li_xing_cheng.phase in self.qiang_li_xing_cheng.p_到位阶段:
             if self.pre_is_ready:
-                self.pharse = self.p_到位
+                self.phase = self.p_到位
             else:
-                self.pharse = self.p_形成前
+                self.phase = self.p_形成前
 
 
-class DStyle(PharseParseStyle, MAMixin):
-    xing_cheng = BaseDStyle
+class DStyleFaZhan(ParseStyle, MAMixin):
+    d_style_xing_cheng = DStyleXingCheng()
 
     p_已到位 = 2
     p_博大失败 = 2

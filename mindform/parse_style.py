@@ -2,12 +2,11 @@
 
 import traceback
 
-from collections import Iterable
-from mindform.basestyle import Style, BaseField, MindFormDict
-from mindform.style import StyleField
+from mindform.style import Style, BaseDataType
+from mindform.utils import MindFormDict
 
 
-class BaseParseStyle(Style):
+class ParseStyle(Style):
     def __init__(self):
         self.stocks_data = {} # 存储所有个股的字段数据
         self.stocks_date = {} # 存储每只个股已计算的日期
@@ -30,7 +29,7 @@ class BaseParseStyle(Style):
         :param all_history_data: 当前正在处理的个股的历史数据
         :return:
         """
-        if isinstance(field_data, BaseField):
+        if isinstance(field_data, BaseDataType):
             field_data.handle_rights(all_history_data)
         elif isinstance(field_data, (list, set, tuple)):
             for i in field_data:
@@ -72,7 +71,7 @@ class BaseParseStyle(Style):
         self.pre_data = self.stocks_pre_data.get(stock, MindFormDict())
         if self.now_data is None:
             self.now_data = MindFormDict()
-            self.init_first_day_data(self.now_data, time, k_data)
+            self.init_first_day_data(k_data)
 
         else:
             for name in self.__fields__:
@@ -94,7 +93,7 @@ class BaseParseStyle(Style):
         :return:
         """
         self.pre_data = MindFormDict()
-        self.pre_data.pharse = self.now_data.pharse
+        self.pre_pharse = self.phase
 
     def set_now_stock(self, stock):
         """
@@ -106,18 +105,18 @@ class BaseParseStyle(Style):
         self.now_data = self.stocks_data[self.now_stock]
         self.pre_data = self.stocks_pre_data[self.now_stock]
 
-    def init_first_day_data(self, stock, time, k_data):
+    def init_first_day_data(self, time, k_data):
         return self.init_first_row(k_data)
 
     def __getattribute__(self, item):
-        if item in super(BaseParseStyle, self).__getattribute__('__fields__'):
-            return super(BaseParseStyle, self).__getattribute__('now_data')[item]
+        if item in super(ParseStyle, self).__getattribute__('__fields__'):
+            return super(ParseStyle, self).__getattribute__('now_data')[item]
 
         if item.startswith('pre_'):
-            if item[4:] in super(BaseParseStyle, self).__getattribute__('__fields__'):
-                return super(BaseParseStyle, self).__getattribute__('pre_data').get(item)
+            if item[4:] in super(ParseStyle, self).__getattribute__('__fields__'):
+                return super(ParseStyle, self).__getattribute__('pre_data').get(item)
 
-        return super(BaseParseStyle, self).__getattribute__(item)
+        return super(ParseStyle, self).__getattribute__(item)
 
     def __setattr__(self, item, value):
         if item in self.__fields__:
@@ -127,72 +126,8 @@ class BaseParseStyle(Style):
             if item[5:] in self.__fields__:
                 self.pre_data[item] = value
 
-        return super(BaseParseStyle, self).__setattr__(item, value)
+        return super(ParseStyle, self).__setattr__(item, value)
 
     def __set_styles__(self, styles):
-        super(BaseParseStyle, self).__set_styles__(styles)
-        BaseField.__set_styles__(styles)
-
-
-class PointField(BaseField):
-    """
-    当比较大小时，直接使用后复权数据即可
-    当计算涨幅时，需要判断复权因子是否易发生改变，是则需要重新查询前复
-    权数据
-    """
-    today = None
-    _rights_date = None
-
-    def __init__(self, price=None, stock_k_data=None, date=None):
-        self.date = date
-        if self.date is None:
-            self.date = self.styles.td
-        self.price = price
-        self.pre_price = price
-
-        if stock_k_data is None:
-            self.close = self.styles.now_k_data['close']
-            self.pre_close = self.styles.now_k_data['close']
-            self.open = self.styles.now_k_data['open']
-            self.high = self.styles.now_k_data['high']
-            self.low = self.styles.now_k_data['low']
-        else:
-            self.close = stock_k_data['close']
-            self.pre_close = stock_k_data['close']
-            self.open = stock_k_data['open']
-            self.high = stock_k_data['high']
-            self.low = stock_k_data['low']
-
-    def handle_rights(self, all_history_data):
-        """
-        处理复权
-        :param all_history_data:
-        :return:
-        """
-        self.close = all_history_data.loc[self.date]['close']
-        factor = self.close / self.pre_close
-        if self.price is not None:
-            self.price = self.pre_price * factor
-        self.open = all_history_data.loc[self.date]['open']
-        self.high = all_history_data.loc[self.date]['high']
-        self.low = all_history_data.loc[self.date]['low']
-
-    def __cmp__(self, other):
-        return self.price.__cmp__(other.price)
-
-    def __str__(self):
-        return "点|{}|{}".format(self.date, self.price)
-
-
-class DataField(BaseField):
-    def __init__(self, data):
-        self.data = data
-
-    def __str__(self):
-        if isinstance(self.data, Iterable):
-            return ",".join([str(i) for i in self.data])
-        return "{}".format(self.data)
-
-
-class PharseParseStyle(BaseParseStyle):
-    pharse = StyleField(DataField)
+        super(ParseStyle, self).__set_styles__(styles)
+        BaseDataType.__set_styles__(styles)
