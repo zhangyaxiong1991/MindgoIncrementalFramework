@@ -61,6 +61,7 @@ class ParseStyle(Style):
                 raise Exception('计算个股{}数据时，字段{}未计算'.format(stock, name))
 
     def handle_data(self, stock, time, k_data):
+        k_data = MindFormDict(k_data)
         self.now_stock = stock
         stock_date = self.stocks_date.get(stock, None)
         if stock_date is not None:
@@ -69,9 +70,9 @@ class ParseStyle(Style):
         self.date = time
         self.now_data = self.stocks_data.get(stock, MindFormDict())
         self.pre_data = self.stocks_pre_data.get(stock, MindFormDict())
-        if self.now_data is None:
+        if not self.now_data:
             self.now_data = MindFormDict()
-            self.init_first_day_data(k_data)
+            self.init_first_row(k_data)
 
         else:
             for name in self.__fields__:
@@ -93,7 +94,7 @@ class ParseStyle(Style):
         :return:
         """
         self.pre_data = MindFormDict()
-        self.pre_pharse = self.phase
+        self.pre_phase = self.phase
 
     def set_now_stock(self, stock):
         """
@@ -104,9 +105,6 @@ class ParseStyle(Style):
         self.now_stock = stock
         self.now_data = self.stocks_data[self.now_stock]
         self.pre_data = self.stocks_pre_data[self.now_stock]
-
-    def init_first_day_data(self, time, k_data):
-        return self.init_first_row(k_data)
 
     def __getattribute__(self, item):
         if item in super(ParseStyle, self).__getattribute__('__fields__'):
@@ -123,7 +121,7 @@ class ParseStyle(Style):
             self.now_data[item] = value
 
         if item.startswith('pre_'):
-            if item[5:] in self.__fields__:
+            if item[4:] in self.__fields__:
                 self.pre_data[item] = value
 
         return super(ParseStyle, self).__setattr__(item, value)

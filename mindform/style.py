@@ -17,10 +17,11 @@ class Field:
     配置类，不处理数据
     """
     _index = 1
-    def __init__(self, field_class, many=False, handle_rights_items=None):
+    def __init__(self, field_class, many=False, handle_rights_items=None, choice=None):
         self.field_class = field_class
         self.many = many
         self.handle_rights_items = handle_rights_items
+        self.choice = choice
         self._index = Field._index
         Field._index += 1
 
@@ -34,17 +35,6 @@ class Field:
             result = str(field_data)
         return result
 
-    def format_field_data_str(self, field_data):
-        check = isinstance
-        if isinstance(self.field_class, type):
-            check = issubclass
-        if check(self.field_class, BaseDataType):
-            return self.base_field_format_str(field_data)
-        elif check(self.field_class, Field):
-            return self.field_class.format_str(field_data)
-        else:
-            raise Exception('field must be BaseDataType or Field but not {}'.format(type(self.field_class)))
-
     def format_str(self, field_data):
         if field_data is None:
             return 'None'
@@ -54,19 +44,22 @@ class Field:
                 result += '{'
                 for k, item in field_data:
                     result += (str(k) + ": ")
-                    result += self.format_field_data_str(item)
+                    result += str(item)
                     result += ","
                 result += '}'
             elif isinstance(field_data, (list, set)):
                 result += '['
                 for item in field_data:
-                    result += self.format_field_data_str(item)
+                    result += str(item)
                     result += ","
                 result += ']'
             else:
                 raise Exception("if many is True data must be dict、list or set but not {}".format(type(field_data)))
         else:
-            result = self.format_field_data_str(field_data)
+            if self.choice:
+                result = str(self.choice.get(field_data) or field_data)
+            else:
+                result = str(field_data)
         return result
 
     def __set_styles__(self, styles):

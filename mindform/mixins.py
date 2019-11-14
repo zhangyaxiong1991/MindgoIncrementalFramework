@@ -31,7 +31,7 @@ class MAMixin:
         return False
 
     def 阴线(self):
-        if self.now_k_data['close'] < self.pre_k_data['open']:
+        if self.now_k_data.close < self.now_k_data.open:
             return True
         return False
 

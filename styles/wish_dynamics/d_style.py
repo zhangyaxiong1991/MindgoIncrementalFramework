@@ -49,7 +49,7 @@ class DPoint(ParseStyle, MAMixin):
     all_d_points = Field(DPoint, many=True)
     is_ready = Field(bool)
 
-    def init_first_day_data(self, time, k_data):
+    def init_first_row(self, k_data):
         self.phase = self.已形成
         self.all_d_points = []
         start = Point()
@@ -58,7 +58,7 @@ class DPoint(ParseStyle, MAMixin):
         self.start_point = start
         self.is_ready = True  # 是否已经运行到过200 50日线上
 
-    def parse_pharse(self):
+    def parse_phase(self):
         # phase 用到is ready 提前计算
         if self.now_k_data.high > self.MA(200) and self.now_k_data.high > self.MA(50) and \
                 self.now_k_data.high > self.MA(10) or self.now_k_data.high > self.MA(20):
@@ -87,7 +87,7 @@ class DPoint(ParseStyle, MAMixin):
                     if low_start.open < self.start_point.open:
                         self.start_point = low_start
 
-        if self.pre_pharse == self.已形成:
+        if self.pre_phase == self.已形成:
             if self.now_k_data.high < self.MA(200) or self.now_k_data.high < self.MA(50):
                 self.phase = self.均线下
 
@@ -122,7 +122,7 @@ class DPoint(ParseStyle, MAMixin):
         如果创新低，且有起点则更新起点
         :return:
         """
-        # 不需要再pharse前处理，因为如果发生，一定不会形成，对pharse无影响
+        # 不需要再phase前处理，因为如果发生，一定不会形成，对phase无影响
         # todo: 有没有可能，比地点低，但是却在50 200 日线上？  应该几乎不会发生
         if not self.phase == self.已形成 and self.all_d_points is not None:
             if self.now_k_data.open < self.start_point.open:
@@ -152,7 +152,7 @@ class DStyleXingCheng(ParseStyle, MAMixin):
     d_point = Field(Point, many=True) # D类型对应的D类高点
     healthy = Field(bool) # 形成阶段是否健康
 
-    def init_first_day_data(self, time, k_data):
+    def init_first_row(self, k_data):
         self.phase = self.p_形成前
         self.is_ready = False
         self.d_point = None
@@ -175,7 +175,7 @@ class DStyleXingCheng(ParseStyle, MAMixin):
             if not found:
                 self.is_ready = False
 
-    def parse_pharse(self):
+    def parse_phase(self):
         if self.qiang_li_xing_cheng.phase == self.qiang_li_xing_cheng.p_回调中:
             if self.is_ready:
                 self.phase = self.p_已形成
