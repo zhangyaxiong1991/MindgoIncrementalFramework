@@ -1,6 +1,6 @@
 # coding:utf-8
 
-import traceback
+import copy
 
 from mindform.style import Style, BaseDataType
 from mindform.utils import MindFormDict
@@ -68,12 +68,11 @@ class ParseStyle(Style):
             if time <= stock_date:
                 raise Exception('个股：{} 在日期：{}的数据重复计算'.format(stock, time))
         self.date = time
-        self.now_data = self.stocks_data.get(stock, MindFormDict())
-        self.pre_data = self.stocks_pre_data.get(stock, MindFormDict())
-        if not self.now_data:
+        self.now_data = self.stocks_data.get(stock, None)
+        self.pre_data = copy.copy(self.now_data)
+        if self.now_data is None:
             self.now_data = MindFormDict()
             self.init_first_row(k_data)
-
         else:
             for name in self.__fields__:
                 log.info("{} parse {} {}".format(self.now_stock, self.__name__, name))
@@ -83,18 +82,9 @@ class ParseStyle(Style):
             for name in self.__fields__:
                 log_str += "{}: {}, ".format(name, self.__fields__[name].format_str(self.now_data[name]))
             log.info(log_str)
-        self.set_pre_data()
         self.stocks_pre_data[stock] = self.pre_data
         self.check_result(stock)
         self.stocks_data[stock] = self.now_data
-
-    def set_pre_data(self):
-        """
-        由子类继承，在计算完成后调用，用于存储下一天需要用到的数据
-        :return:
-        """
-        self.pre_data = MindFormDict()
-        self.pre_phase = self.phase
 
     def set_now_stock(self, stock):
         """
@@ -110,9 +100,14 @@ class ParseStyle(Style):
         if item in super(ParseStyle, self).__getattribute__('__fields__'):
             return super(ParseStyle, self).__getattribute__('now_data')[item]
 
+        if item in super(ParseStyle, self).__getattribute__('now_k_data'):
+            return super(ParseStyle, self).__getattribute__('now_k_data')[item]
+
         if item.startswith('pre_'):
             if item[4:] in super(ParseStyle, self).__getattribute__('__fields__'):
-                return super(ParseStyle, self).__getattribute__('pre_data').get(item)
+                return super(ParseStyle, self).__getattribute__('pre_data').get(item[4:])
+            if item[4:] in super(ParseStyle, self).__getattribute__('pre_k_data'):
+                return super(ParseStyle, self).__getattribute__('pre_k_data')[item[4:]]
 
         return super(ParseStyle, self).__getattribute__(item)
 
