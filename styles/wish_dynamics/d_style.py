@@ -4,7 +4,7 @@ from mindform.style_manager import Field
 from mindform.style import BaseDataType
 from mindform.parse_style import ParseStyle
 from mindform.data_type import Point
-from styles.wish_dynamics.power_form import QiangLiXingCheng
+from styles.wish_dynamics.power_form import QiangLiXingCheng, QLPoints
 from mindform.mixins import MAMixin
 
 D_POINT_LENGTH = 0.15
@@ -37,7 +37,7 @@ class DPoint(BaseDataType):
         self.d_point.handle_rights(all_history_data)
 
 
-class DPoint(ParseStyle, MAMixin):
+class DPoints(ParseStyle, MAMixin):
     已形成 = 3
     均线上 = 2
     均线中 = 0
@@ -140,16 +140,23 @@ class DPoint(ParseStyle, MAMixin):
 
 
 class DStyleXingCheng(ParseStyle, MAMixin):
+    ql_points = QLPoints()
     qiang_li_xing_cheng = QiangLiXingCheng()
-    d_points = DPoint()
+    d_points = DPoints()
 
     p_形成前 = 0
     p_已形成 = 1
     p_到位 = 2
 
+    PHASE_CHOICE = {
+        p_形成前: 'p_形成前',
+        p_已形成: 'p_已形成',
+        p_到位: 'p_到位'
+    }
+
     is_ready = Field(bool)  # 形成前标记是否可形成D类，即是否在D类高点区
-    phase = Field(int)
-    d_point = Field(Point, many=True) # D类型对应的D类高点
+    phase = Field(int, choice=PHASE_CHOICE)
+    d_point = Field(DPoint) # D类型对应的D类高点
     healthy = Field(bool) # 形成阶段是否健康
 
     def init_first_row(self, k_data):
@@ -164,23 +171,29 @@ class DStyleXingCheng(ParseStyle, MAMixin):
         需要随时判断是否已经失效
         :return:
         """
-        if not self.is_ready or self.now_k_data.close >= self.d_point[1].high:
-            found = False
-            for i in self.d_points.all_d_points[-1::-1]:
-                if i[2] == DPoint.最高点未体现:
-                    continue
-                if self.now_k_data.high >= i[1].close and not self.now_k_data.close >= i[1].high:
-                    self.is_ready = True
-                    found = True
-            if not found:
+        if not self.is_ready:
+            if self.now_k_data.close >= self.d_point.point.high:
+                found = False
+                for i in self.d_points.all_d_points[-1::-1]:
+                    if i.status == DPoint.最高点未体现:
+                        continue
+                    if self.now_k_data.high >= i.point.close and not self.now_k_data.close >= i.point.high:
+                        self.is_ready = True
+                        found = True
+                if not found:
+                    self.is_ready = False
+
+        # 强力起点重置为当天后，上一次超过的D类高点失效
+        if self.is_ready:
+            if self.ql_points.start.date == self.styles.td:
                 self.is_ready = False
 
     def parse_phase(self):
         if self.qiang_li_xing_cheng.phase == self.qiang_li_xing_cheng.p_回调中:
             if self.is_ready:
                 self.phase = self.p_已形成
-        if self.qiang_li_xing_cheng.phase in self.qiang_li_xing_cheng.p_到位阶段:
-            if self.pre_is_ready:
+        if self.qiang_li_xing_cheng.phase == self.qiang_li_xing_cheng.p_到位:
+            if self.pre_phase == self.p_已形成:
                 self.phase = self.p_到位
             else:
                 self.phase = self.p_形成前
@@ -189,6 +202,26 @@ class DStyleXingCheng(ParseStyle, MAMixin):
 class DStyleFaZhan(ParseStyle, MAMixin):
     d_style_xing_cheng = DStyleXingCheng()
 
-    p_已到位 = 2
-    p_博大失败 = 2
-    p_博大成功 = 5
+    p_形成前 = 0
+    p_已到位 = 20
+    p_博大中 = 30
+    p_博大成功 = 50
+    p_上冲成功 = 60
+    p_上冲成功 = 70
+
+    phase = Field(int)
+    is_hou_qi = Field(bool)
+    dao_wei = Field(Point)  # 到位点
+    bo_da_qi_dian = Field(Point)  # 博大起点
+
+    def init_first_row(self, k_data):
+        self.phase = self.p_形成前
+        self.is_hou_qi = False
+
+    def parse_phase(self):
+        if self.d_style_xing_cheng.phase == self.d_style_xing_cheng.p_到位:
+            self.bo_da_qi_dian = Point()
+
+            if self.close > self.d_style_xing_cheng.d_point.point.high:
+                self.is_hou_qi = True
+                self.phase = self.p_博大成功

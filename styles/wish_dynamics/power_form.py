@@ -72,6 +72,7 @@ class QLPoints(ParseStyle, MAMixin):
 
     def set_pre_data(self):
         super(QLPoints, self).set_pre_data()
+        self.pre_
         log.info("phase:{}, start:{}, force_start:{}".format(self.phase,
                                                               self.start, self.now_data['force_start']))
 
@@ -86,7 +87,6 @@ class QiangLiXingCheng(ParseStyle, MAMixin):
     p_到位后 = 81
 
     PHASE_CHOICE = {
-        p_形成前: 'p_形成前',
         p_形成前: 'p_形成前',
         p_回调中: 'p_回调中',
         p_到位: 'p_到位',

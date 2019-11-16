@@ -2,6 +2,7 @@
 
 from mindform.style import BaseDataType
 
+
 class Point(BaseDataType):
     """
     当比较大小时，直接使用后复权数据即可
