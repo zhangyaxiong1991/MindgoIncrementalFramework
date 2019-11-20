@@ -4,6 +4,7 @@ from mindform.parse_style import ParseStyle
 from mindform.data_type import Point
 from mindform.style import Field
 from mindform.mixins import MAMixin
+from mindform.mindgo import plt
 
 
 # 加一个字段，记录进入CROSS_MA10后的最高点 以及 最高收盘价的位置
@@ -73,7 +74,7 @@ class QLPoints(ParseStyle, MAMixin):
     def set_pre_data(self):
         super(QLPoints, self).set_pre_data()
         self.pre_
-        log.info("phase:{}, start:{}, force_start:{}".format(self.phase,
+        plt.log.info("phase:{}, start:{}, force_start:{}".format(self.phase,
                                                               self.start, self.now_data['force_start']))
 
 
@@ -154,7 +155,6 @@ class QiangLiFaZhan(ParseStyle, MAMixin):
     p_收阳前 = 41
     p_阳到位 = 50
     p_收阳 = 60
-    p_阴2 = 70
 
     PHASE_CHOICE = {
         p_到位前: 'p_到位前',
@@ -162,13 +162,18 @@ class QiangLiFaZhan(ParseStyle, MAMixin):
         p_收阳前: 'p_收阳前',
         p_阳到位: 'p_阳到位',
         p_收阳: 'p_收阳',
-        p_阴2: 'p_阴2',
     }
+
+    发展中的状态 = [p_阴到位, p_收阳前, p_阳到位, p_收阳]
 
     phase = Field(int, choice=PHASE_CHOICE)
     xing_cheng = Field(Point)
     zui_gao = Field(Point)
     dao_wei = Field(Point)
+    yin2 = Field(bool)
+    bo_da_cheng_gong = Field(bool)
+    yin_jia_su = Field(bool)
+    yin_tiao_kong = Field(bool)
 
     def init_first_row(self, first_day_stock_data):
         self.phase = self.p_到位前

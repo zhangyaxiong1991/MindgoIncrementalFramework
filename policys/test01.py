@@ -1,6 +1,7 @@
 # coding: utf-8
 from mindform.style_manager import StyleManager
 from styles.wish_dynamics.power_form import QLPoints, QiangLiXingCheng, QiangLiFaZhan
+from mindform.mindgo import plt
 
 
 def init(account):
@@ -16,7 +17,7 @@ def before_trading(account):
 
 
 def after_trading(account):
-    log.info("after_trading_end:{}".format(get_datetime()))
+    plt.log.info("after_trading_end:{}".format(plt.get_datetime()))
     account.styles.after_trading_end(account)
 
 

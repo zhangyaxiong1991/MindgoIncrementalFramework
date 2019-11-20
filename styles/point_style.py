@@ -98,11 +98,11 @@ class TrendPointPool(Style):
         index = self.indexs.get(stock, 0)
         pre_point = self.pre_points.get(stock)
         point = TrendKPoint(stock, time, index, k_data, pre_point)
-        log.info("stock: {}  point status:{}".format(stock, point.trend))
+        plt.log.info("stock: {}  point status:{}".format(stock, point.trend))
 
         if point.trend == TrendKPoint.下跌:
             if self.low_points.get(stock) is None or point.k_data["low"] <= self.low_points[stock].k_data["low"]:
-                log.info("低点比较: {} {}".format(point.k_data["low"], self.low_points[stock].k_data["low"] if stock in self.low_points else None))
+                plt.log.info("低点比较: {} {}".format(point.k_data["low"], self.low_points[stock].k_data["low"] if stock in self.low_points else None))
                 self.low_points[stock] = point
         elif point.trend == TrendKPoint.上涨:
             if self.high_points.get(stock) is None or point.k_data["high"] >= self.high_points[stock].k_data["high"]:
@@ -112,11 +112,11 @@ class TrendPointPool(Style):
         if pre_point is not None:
             if pre_point.trend * point.trend < 0:
                 if point.trend > 0:
-                    log.info("stock:{} 低点: {}".format(stock, self.low_points[stock]))
+                    plt.log.info("stock:{} 低点: {}".format(stock, self.low_points[stock]))
                     stock_point_list.append(self.low_points[stock])
                     self.low_points[stock] = None
                 elif point.trend < 0:
-                    log.info("stock:{} 高点: {}".format(stock, self.high_points[stock]))
+                    plt.log.info("stock:{} 高点: {}".format(stock, self.high_points[stock]))
                     stock_point_list.append(self.high_points[stock])
                     self.high_points[stock] = None
                 else:
