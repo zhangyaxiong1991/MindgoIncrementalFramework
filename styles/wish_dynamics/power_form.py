@@ -71,12 +71,6 @@ class QLPoints(ParseStyle, MAMixin):
             if self.now_k_data.open < self.start.price:
                 self.start = Point(self.now_k_data.open)
 
-    def set_pre_data(self):
-        super(QLPoints, self).set_pre_data()
-        self.pre_
-        plt.log.info("phase:{}, start:{}, force_start:{}".format(self.phase,
-                                                              self.start, self.now_data['force_start']))
-
 
 class QiangLiXingCheng(ParseStyle, MAMixin):
     """
@@ -136,7 +130,7 @@ class QiangLiXingCheng(ParseStyle, MAMixin):
         #  强力点，起点发生改变后，重新开始记录最高点
         if self.phase == self.p_回调中:
             if self.pre_phase == self.p_形成前:
-                date, stock_data = self.high('high', self.qiang_li_gao_dian.start.date, self.xing_cheng.date)
+                date, stock_data = self.周期内高点('high', self.qiang_li_gao_dian.start.date, self.xing_cheng.date)
                 self.zui_gao = Point(stock_data.high, stock_data, date)
             else:
                 if self.now_k_data.high > self.zui_gao.price:
@@ -163,7 +157,7 @@ class QiangLiFaZhan(ParseStyle, MAMixin):
         p_阳到位: 'p_阳到位',
         p_收阳: 'p_收阳',
     }
-
+    p_到位 = [p_阴到位, p_阳到位]
     发展中的状态 = [p_阴到位, p_收阳前, p_阳到位, p_收阳]
 
     phase = Field(int, choice=PHASE_CHOICE)
@@ -174,23 +168,39 @@ class QiangLiFaZhan(ParseStyle, MAMixin):
     bo_da_cheng_gong = Field(bool)
     yin_jia_su = Field(bool)
     yin_tiao_kong = Field(bool)
+    yang_hou_yin = Field(bool)
 
     def init_first_row(self, first_day_stock_data):
         self.phase = self.p_到位前
         self.xing_cheng = None
         self.zui_gao = None
         self.dao_wei = None
+        self.yin2 = False
+        self.bo_da_cheng_gong = False
+        self.yin_jia_su = False
+        self.yin_tiao_kong = False
+        self.yang_hou_yin = False
 
     def parse_phase(self):
         if self.xing_cheng_jie_duan.phase == QiangLiXingCheng.p_到位:
+            self.zui_gao = self.xing_cheng_jie_duan.zui_gao
             if self.now_k_data.close < self.now_k_data.open:
                 self.phase = self.p_阴到位
             else:
                 self.phase = self.p_阳到位
 
+        if self.phase in self.p_到位:
+            if self.close > self.zui_gao.close:
+                self.bo_da_cheng_gong = True
+
         elif self.pre_phase in (self.p_阴到位, self.p_收阳前):
-            if self.向下跳空() or self.阴加速():
+            if self.向下跳空():
                 self.phase = self.p_到位前
+                self.yin_tiao_kong = True
+
+            elif self.阴加速():
+                self.phase = self.p_到位前
+                self.yin_jia_su = True
 
             elif self.now_k_data.close > self.now_k_data.open:
                 self.phase = self.p_收阳
@@ -201,17 +211,16 @@ class QiangLiFaZhan(ParseStyle, MAMixin):
         elif self.pre_phase in (self.p_阳到位, self.p_收阳):
             if self.向下跳空() or self.阴加速():
                 self.phase = self.p_到位前
+                self.yin_jia_su = True
 
             elif self.阴线():
+                self.phase = self.p_到位前
                 if self.now_k_data.high >= self.MA(10):
-                    self.phase = self.p_阴2
+                    self.yin2 = True
                 else:
-                    self.phase = self.p_到位前
+                    self.yang_hou_yin = True
             else:
                 self.phase = self.p_收阳
-
-        elif self.pre_phase == self.p_阴2:
-            self.phase = self.p_到位前
 
     def parse_xing_cheng(self):
         if self.phase in [self.p_阳到位, self.p_阴到位]:
@@ -224,3 +233,19 @@ class QiangLiFaZhan(ParseStyle, MAMixin):
     def parse_dao_wei(self):
         if self.phase in [self.p_阳到位, self.p_阴到位]:
             self.dao_wei = Point()
+
+    def after_parse(self):
+        if self.pre_yin2:
+            self.yin2 = False
+
+        if self.pre_bo_da_cheng_gong:
+            self.bo_da_cheng_gong = False
+
+        if self.pre_yin_jia_su:
+            self.yin_jia_su = False
+
+        if self.pre_yin_tiao_kong:
+            self.yin_tiao_kong = False
+
+        if self.pre_yang_hou_yin:
+            self.yang_hou_yin = False

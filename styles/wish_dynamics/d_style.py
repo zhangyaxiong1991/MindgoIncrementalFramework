@@ -30,12 +30,12 @@ class DPoint(BaseDataType):
 
     def _check(self):
         assert isinstance(self.start, Point)
-        assert isinstance(self.d_point, Point)
-        assert self.d_point.close / self.start.open >= 1.16
+        assert isinstance(self.point, Point)
+        assert self.point.close / self.start.open >= 1.16
 
     def handle_rights(self, all_history_data):
         self.start.handle_rights(all_history_data)
-        self.d_point.handle_rights(all_history_data)
+        self.point.handle_rights(all_history_data)
 
 
 class DPoints(ParseStyle, MAMixin):
@@ -127,7 +127,7 @@ class DPoints(ParseStyle, MAMixin):
         # todo: 有没有可能，比地点低，但是却在50 200 日线上？  应该几乎不会发生
         if not self.phase == self.已形成 and self.all_d_points is not None:
             if self.now_k_data.open < self.start_point.open:
-                self.all_d_points = Point()
+                self.start_point = Point()
 
     def parse_now_d_point(self):
         """
@@ -172,22 +172,25 @@ class DStyleXingCheng(ParseStyle, MAMixin):
         需要随时判断是否已经失效
         :return:
         """
-        if not self.is_ready:
-            if self.now_k_data.close >= self.d_point.point.high:
-                found = False
+        if self.d_points.all_d_points:
+            # 超过了最低的D类高点，则重新判断is ready，没超过一定不用重新判断
+            if self.now_k_data.close >= self.d_points.all_d_points[-1].point.high:
+                self.d_point = None
                 for i in self.d_points.all_d_points[-1::-1]:
                     if i.status == DPoint.最高点未体现:
                         continue
                     if self.now_k_data.high >= i.point.close and not self.now_k_data.close >= i.point.high:
                         self.is_ready = True
-                        found = True
-                if not found:
+                        self.d_point = i
+                if self.d_point is None:
                     self.is_ready = False
+        else:
+            self.is_ready = False
 
-        # 强力起点重置为当天后，上一次超过的D类高点失效
-        if self.is_ready:
-            if self.ql_points.start.date == self.styles.td:
-                self.is_ready = False
+        # # 强力起点重置为当天后，上一次超过的D类高点失效
+        # if self.is_ready:
+        #     if self.ql_points.start.date == self.styles.td:
+        #         self.is_ready = False
 
     def parse_phase(self):
         if self.qiang_li_xing_cheng.phase == self.qiang_li_xing_cheng.p_回调中:
@@ -220,10 +223,14 @@ class DStyleFaZhan(ParseStyle, MAMixin):
     is_hou_qi = Field(bool)
     dao_wei = Field(Point)  # 到位点
     bo_da_qi_dian = Field(Point)  # 博大起点
+    d_point = Field(Point)
 
     def init_first_row(self, k_data):
         self.phase = self.p_形成前
         self.is_hou_qi = False
+        self.dao_wei = None
+        self.bo_da_qi_dian = None
+        self.d_point = None
 
     def parse_phase(self):
         if self.d_style_xing_cheng.phase == self.d_style_xing_cheng.p_到位:
@@ -233,6 +240,7 @@ class DStyleFaZhan(ParseStyle, MAMixin):
             self.bo_da_qi_dian = Point()
             self.dao_wei = Point()
             self.phase = self.p_到位
+            self.d_point = self.d_style_xing_cheng.d_point
             self.is_博大成功()
             self.is_上冲成功()
 
@@ -256,9 +264,6 @@ class DStyleFaZhan(ParseStyle, MAMixin):
         elif self.pre_phase == self.p_上冲中:
             self.is_上冲成功()
 
-        else:
-            plt.log.warn("位置的强力形态发展阶段：{}".format(self.phase))
-
     def parse_bo_da_qi_dian(self):
         if self.phase in self.BO_DA_QI_DIAN_SHUA_XIN:
             if self.open < self.bo_da_qi_dian.open:
@@ -271,7 +276,7 @@ class DStyleFaZhan(ParseStyle, MAMixin):
     def is_博大成功(self):
         self.is_博大失败()
         if self.phase in (self.p_到位, self.p_博大中):
-            if self.close > self.d_style_xing_cheng.d_point.point.high:
+            if self.close > self.d_point.point.high:
                 self.phase = self.p_博大成功
 
     def is_上冲成功(self):

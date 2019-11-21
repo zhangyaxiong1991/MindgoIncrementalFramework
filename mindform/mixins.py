@@ -35,7 +35,7 @@ class MAMixin:
             return True
         return False
 
-    def high(self, target, start, end):
+    def 周期内高点(self, target, start, end):
         if isinstance(start, int):
             date = self.styles.stock_cache_data.iloc[start: end][target].idxmax()
             return date, self.styles.stock_cache_data.iloc[date]
@@ -43,7 +43,7 @@ class MAMixin:
             date = self.styles.stock_cache_data.loc[start: end][target].argmax()
             return date, self.styles.stock_cache_data.loc[date]
 
-    def low(self, target, start, end):
+    def 周期内低点(self, target, start, end):
         if isinstance(start, int):
             date = self.styles.stock_cache_data.iloc[start: end][target].idxmin()
             return date, self.styles.stock_cache_data.iloc[date]

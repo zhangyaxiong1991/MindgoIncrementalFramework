@@ -183,8 +183,7 @@ class StyleManager(object):
                                                  .format(self.stocks_cache_data[stock].index[-1], last_two_days_data.index[0]))
                             if not self.stocks_cache_data[stock].iloc[-1]["close"] == last_two_days_data.iloc[0]["close"]:
                                 # 需要复权，先拿着所有历史数据去对让形态数据复权，然后裁剪后赋值给缓存数据
-                                plt.log.info("{} 发生复权 \n缓存的最后一天数据：{}\n 下载的前一天数据：{}"
-                                         .format(stock, self.stocks_cache_data[stock].iloc[-1]["close"], last_two_days_data.iloc[0]["close"]))
+                                plt.log.info("{} 发生复权 \n缓存的最后一天数据：{}\n 下载的前一天数据：{}".format(stock, self.stocks_cache_data[stock].iloc[-1]["close"], last_two_days_data.iloc[0]["close"]))
                                 stock_all_history_data = self.get_stock_all_history_data(stock)
                                 missed_date = set(self.stocks_cache_data[stock].index) - set(stock_all_history_data.index)
                                 if missed_date:

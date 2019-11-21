@@ -11,11 +11,12 @@ if __name__ == '__main__':
     target = r'D:\code\MindgoIncrementalFramework\policys\test01.py'
     finder.load_file(target)
     merge_file = """# coding:utf-8
+import copy
+import datetime
+import traceback
 from collections import OrderedDict, Sequence, Iterable
 
 import pandas as pd
-import datetime
-import traceback
     """
 
     for file in reversed(finder.paths):

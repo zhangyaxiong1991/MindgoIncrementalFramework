@@ -4,6 +4,7 @@ import copy
 
 from mindform.style import Style, BaseDataType
 from mindform.utils import MindFormDict
+from mindform.mindgo import plt
 
 
 class ParseStyle(Style):
@@ -76,8 +77,11 @@ class ParseStyle(Style):
         else:
             for name in self.__fields__:
                 plt.log.info("{} parse {} {}".format(self.now_stock, self.__name__, name))
-                if callable(getattr(self, 'parse_' + name)):
-                    getattr(self, 'parse_' + name)()
+                if hasattr(self, 'parse_' + name):
+                    if callable(getattr(self, 'parse_' + name)):
+                        getattr(self, 'parse_' + name)()
+            if callable(getattr(self, 'after_parse')):
+                getattr(self, 'after_parse')()
             log_str = 'result is '
             for name in self.__fields__:
                 log_str += "{}: {}, ".format(name, self.__fields__[name].format_str(self.now_data[name]))
@@ -85,6 +89,9 @@ class ParseStyle(Style):
         self.stocks_pre_data[stock] = self.pre_data
         self.check_result(stock)
         self.stocks_data[stock] = self.now_data
+
+    def after_parse(self):
+        pass
 
     def set_now_stock(self, stock):
         """
@@ -97,17 +104,22 @@ class ParseStyle(Style):
         self.pre_data = self.stocks_pre_data[self.now_stock]
 
     def __getattribute__(self, item):
+        if item in ['now_k_data', '__fields__', 'pre_data', 'pre_k_data']:
+            return super(ParseStyle, self).__getattribute__(item)
+
         if item in super(ParseStyle, self).__getattribute__('__fields__'):
             return super(ParseStyle, self).__getattribute__('now_data')[item]
 
-        if item in super(ParseStyle, self).__getattribute__('now_k_data'):
-            return super(ParseStyle, self).__getattribute__('now_k_data')[item]
+        if super(ParseStyle, self).__getattribute__('now_k_data') is not None:
+            if item in super(ParseStyle, self).__getattribute__('now_k_data'):
+                return super(ParseStyle, self).__getattribute__('now_k_data')[item]
 
         if item.startswith('pre_'):
             if item[4:] in super(ParseStyle, self).__getattribute__('__fields__'):
                 return super(ParseStyle, self).__getattribute__('pre_data').get(item[4:])
-            if item[4:] in super(ParseStyle, self).__getattribute__('pre_k_data'):
-                return super(ParseStyle, self).__getattribute__('pre_k_data')[item[4:]]
+            if super(ParseStyle, self).__getattribute__('pre_k_data') is not None:
+                if item[4:] in super(ParseStyle, self).__getattribute__('pre_k_data'):
+                    return super(ParseStyle, self).__getattribute__('pre_k_data')[item[4:]]
 
         return super(ParseStyle, self).__getattribute__(item)
 
