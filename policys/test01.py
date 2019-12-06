@@ -9,9 +9,10 @@ from mindform.mindgo import plt
 def init(account):
     # 设置要交易的证券(600519.SH 贵州茅台)
     account.security = '000001.SH'
-    s = StyleManager('000001.SH', ['000413.SZ'], datetime.datetime.strptime('20150527', "%Y%m%d"))
+    s = StyleManager('000001.SH', ['002102.SZ'], datetime.datetime.strptime('20150527', "%Y%m%d"))
     s.regist([DStyleFaZhan])
     account.styles = s
+    plt.log.log_date = datetime.datetime.strptime('20160801', "%Y%m%d") - datetime.timedelta(days=20)
 
 
 def before_trading(account):
@@ -19,7 +20,7 @@ def before_trading(account):
 
 
 def after_trading(account):
-    plt.log.info("after_trading_end:{}".format(plt.get_datetime()))
+    # plt.log.info("after_trading_end:{}".format(plt.get_datetime()))
     account.styles.after_trading_end(account)
 
 

@@ -76,7 +76,7 @@ class ParseStyle(Style):
             self.init_first_row(k_data)
         else:
             for name in self.__fields__:
-                plt.log.info("{} parse {} {}".format(self.now_stock, self.__name__, name))
+                # plt.log.info("{} parse {} {}".format(self.now_stock, self.__name__, name))
                 if hasattr(self, 'parse_' + name):
                     if callable(getattr(self, 'parse_' + name)):
                         getattr(self, 'parse_' + name)()
@@ -85,7 +85,7 @@ class ParseStyle(Style):
             log_str = 'result is '
             for name in self.__fields__:
                 log_str += "{}: {}, ".format(name, self.__fields__[name].format_str(self.now_data[name]))
-            plt.log.info(log_str)
+            plt.log.info("{} | {}: {}".format(self.__name__, self.now_stock, log_str))
         self.stocks_pre_data[stock] = self.pre_data
         self.check_result(stock)
         self.stocks_data[stock] = self.now_data

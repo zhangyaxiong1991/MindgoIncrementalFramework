@@ -147,13 +147,13 @@ class StyleManager(object):
         if self.last_two_days_data_refresh_date is None or not self.last_two_days_data_refresh_date == self.td:
             self.last_two_days_data_refresh_date = self.td
             if self.start_date > self.td:
-                plt.log.info("还未到达框架起始时间，不下载任何数据")
+                # plt.log.info("还未到达框架起始时间，不下载任何数据")
                 self.last_two_days_data = {}
                 self.stocks_cache_data = {}
             else:
                 all_stocks = self.get_all_stocks()
                 if self.start_date == self.td:
-                    plt.log.info("正好是起始时间，只请求一天的数据")
+                    # plt.log.info("正好是起始时间，只请求一天的数据")
                     self.last_two_days_data = plt.get_candle_stick(all_stocks + [self._driver], self.td.strftime("%Y%m%d"),
                                                                fre_step="1d", fields=self.fileds,
                                                                skip_paused=True, bar_count=1)
@@ -161,19 +161,19 @@ class StyleManager(object):
                     self.last_two_days_data = {k: v for k, v in self.last_two_days_data.items() if not len(v.index) == 0}
                     self.stocks_cache_data = self.last_two_days_data
                 else:
-                    plt.log.info("超过起始时间，请求两天的数据")
+                    # plt.log.info("超过起始时间，请求两天的数据")
                     self.last_two_days_data = plt.get_candle_stick(all_stocks + [self._driver], self.td.strftime("%Y%m%d"),
                                                                fre_step="1d", fields=self.fileds,
                                                                skip_paused=True, bar_count=2)
                     for stock, last_two_days_data in self.last_two_days_data.items():
                         if not self.td in last_two_days_data.index:
                             # 当天停盘
-                            plt.log.info("{} 停盘 日期：{}, 下载数据：{}".format(stock, self.td, last_two_days_data))
+                            # plt.log.info("{} 停盘 日期：{}, 下载数据：{}".format(stock, self.td, last_two_days_data))
                             continue
                         # 剔除掉小于起始时间的数据
                         last_two_days_data.drop([i for i in last_two_days_data.index if i < self.start_date], inplace=True)
                         if len(last_two_days_data) == 1:
-                            plt.log.info("{} 上市日期，只下载到一天的数据".format(stock))
+                            # plt.log.info("{} 上市日期，只下载到一天的数据".format(stock))
                             self.stocks_cache_data[stock] = last_two_days_data
                         else:
                             if stock not in self.stocks_cache_data:
@@ -183,7 +183,7 @@ class StyleManager(object):
                                                  .format(self.stocks_cache_data[stock].index[-1], last_two_days_data.index[0]))
                             if not self.stocks_cache_data[stock].iloc[-1]["close"] == last_two_days_data.iloc[0]["close"]:
                                 # 需要复权，先拿着所有历史数据去对让形态数据复权，然后裁剪后赋值给缓存数据
-                                plt.log.info("{} 发生复权 \n缓存的最后一天数据：{}\n 下载的前一天数据：{}".format(stock, self.stocks_cache_data[stock].iloc[-1]["close"], last_two_days_data.iloc[0]["close"]))
+                                # plt.log.info("{} 发生复权 \n缓存的最后一天数据：{}\n 下载的前一天数据：{}".format(stock, self.stocks_cache_data[stock].iloc[-1]["close"], last_two_days_data.iloc[0]["close"]))
                                 stock_all_history_data = self.get_stock_all_history_data(stock)
                                 missed_date = set(self.stocks_cache_data[stock].index) - set(stock_all_history_data.index)
                                 if missed_date:
@@ -194,7 +194,7 @@ class StyleManager(object):
                                 stock_all_history_data.drop([i for i in stock_all_history_data.index if i < catch_data_first_data], inplace=True)
                                 self.stocks_cache_data[stock] = stock_all_history_data
                             else:
-                                plt.log.info("{} 未复权 简单缓存最后一天的数据".format(stock))
+                                # plt.log.info("{} 未复权 简单缓存最后一天的数据".format(stock))
                                 self.stocks_cache_data[stock] = self.stocks_cache_data[stock].append(last_two_days_data.iloc[1])
                     for stock, stock_catched_data in self.stocks_cache_data.items():
                         if len(stock_catched_data) > self.cache_data_num:
@@ -244,22 +244,22 @@ class StyleManager(object):
             return
         self.set_td_date()
 
-        plt.log.info("开始计算{}形态数据".format(self.td))
+        # plt.log.info("开始计算{}形态数据".format(self.td))
         all_stocks = self.get_all_stocks()
-        plt.log.info("all_stocks: {}".format(all_stocks))
+        # plt.log.info("all_stocks: {}".format(all_stocks))
 
         self.down_load_last_two_days_data()
 
         for name in self._styles:
-            plt.log.info("计算形态:{} 数据".format(name))
+            # plt.log.info("计算形态:{} 数据".format(name))
             for stock in all_stocks:
-                plt.log.info("计算个股{} 数据".format(stock))
+                # plt.log.info("计算个股{} 数据".format(stock))
                 # 还未上市
                 if stock not in self.stocks_cache_data:
                     continue
                 # 当天停盘
                 if not self.td == self.stocks_cache_data[stock].index[-1]:
-                    plt.log.info("{}停盘，不计算形态数据".format(stock))
+                    # plt.log.info("{}停盘，不计算形态数据".format(stock))
                     continue
                 self.stock_cache_data = self.stocks_cache_data[stock]
                 self.set_now_stock(stock)

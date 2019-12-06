@@ -23,6 +23,12 @@ class DPoint(BaseDataType):
     收盘价未体现 = 1
     最高点未体现 = 2
 
+    STATUS_CHOICE = {
+        全体现: "全体现",
+        收盘价未体现: "收盘价未体现",
+        最高点未体现: "最高点未体现",
+    }
+
     def __init__(self, start, point, in_use):
         self.start = start
         self.point = point
@@ -37,6 +43,9 @@ class DPoint(BaseDataType):
         self.start.handle_rights(all_history_data)
         self.point.handle_rights(all_history_data)
 
+    def __str__(self):
+        return "起点: {} D类高点: {} 状态: {}".format(self.start.date.strftime("%Y-%m-%d"), self.point.date.strftime("%Y-%m-%d"), self.STATUS_CHOICE[self.status])
+
 
 class DPoints(ParseStyle, MAMixin):
     已形成 = 3
@@ -50,6 +59,10 @@ class DPoints(ParseStyle, MAMixin):
     all_d_points = Field(DPoint, many=True)
     is_ready = Field(bool)
 
+    @property
+    def all_effective_d_points(self):
+        return [i for i in self.all_d_points if i.status == DPoint.全体现]
+
     def init_first_row(self, k_data):
         self.phase = self.已形成
         self.all_d_points = []
@@ -61,22 +74,22 @@ class DPoints(ParseStyle, MAMixin):
 
     def parse_phase(self):
         # phase 用到is ready 提前计算
-        if self.now_k_data.high > self.MA(200) and self.now_k_data.high > self.MA(50) and \
-                self.now_k_data.high > self.MA(10) or self.now_k_data.high > self.MA(20):
+        if self.high > self.MA(200) and self.high > self.MA(50) and \
+                self.high > self.MA(10) or self.high > self.MA(20):
             self.is_ready = True
 
         # D类失效导致起点更新，会影响判断D类形成，提前计算
         if self.all_d_points:
             # 最后一个d类的收盘价是最低的，只有超过了最后一个d类，再去遍历检查
-            if self.now_k_data.close >= self.all_d_points[-1].point.close:
+            if self.close >= self.all_d_points[-1].point.close:
                 low_start = self.all_d_points[-1].start
-                for d_point in self.all_d_points[:-1]:
+                for d_point in self.all_d_points[::-1]:
                     if d_point.status < DPoint.最高点未体现:
-                        if d_point.point.close > self.now_k_data.close:
+                        if d_point.point.close > self.close:
                             break
 
                         # 以下两种情况的D类高点都已经失效，记录状态该，并比较是否需要更新当前D类高点的起点
-                        if d_point.point.high <= self.now_k_data.close:
+                        if d_point.point.high <= self.close:
                             d_point.status = DPoint.最高点未体现
                         else:
                             d_point.status = DPoint.收盘价未体现
@@ -89,7 +102,7 @@ class DPoints(ParseStyle, MAMixin):
                         self.start_point = low_start
 
         if self.pre_phase == self.已形成:
-            if self.now_k_data.high < self.MA(200) or self.now_k_data.high < self.MA(50):
+            if self.high < self.MA(200) or self.high < self.MA(50):
                 self.phase = self.均线下
 
                 self.all_d_points = [i for i in self.all_d_points if i.status == DPoint.全体现]
@@ -100,17 +113,17 @@ class DPoints(ParseStyle, MAMixin):
 
         else:
             if self.is_ready:
-                if self.now_k_data.close > self.MA(200) and self.now_k_data.close > self.MA(50):
-                    if self.now_k_data.close / self.start_point.open >= (1 + D_POINT_LENGTH):
+                if self.close > self.MA(200) and self.close > self.MA(50):
+                    if self.close / self.start_point.open >= (1 + D_POINT_LENGTH):
                         self.phase = self.已形成
 
                         self.now_d_point = DPoint(self.start_point, Point(), DPoint.全体现)
                         self.start_point = None  # 形成后即可删除起点
 
-            elif self.now_k_data.high < self.MA(200) or self.now_k_data.high < self.MA(50):
+            elif self.high < self.MA(200) or self.high < self.MA(50):
                 self.phase = self.均线下
 
-            elif self.now_k_data.high > self.MA(200) or self.now_k_data.high > self.MA(50):
+            elif self.high > self.MA(200) or self.high > self.MA(50):
                 self.phase = self.均线上
 
             else:
@@ -126,7 +139,7 @@ class DPoints(ParseStyle, MAMixin):
         # 不需要再phase前处理，因为如果发生，一定不会形成，对phase无影响
         # todo: 有没有可能，比地点低，但是却在50 200 日线上？  应该几乎不会发生
         if not self.phase == self.已形成 and self.all_d_points is not None:
-            if self.now_k_data.open < self.start_point.open:
+            if self.open < self.start_point.open:
                 self.start_point = Point()
 
     def parse_now_d_point(self):
@@ -136,7 +149,7 @@ class DPoints(ParseStyle, MAMixin):
         :return:
         """
         if self.phase == self.已形成:
-            if self.now_k_data.close > self.now_d_point.point.close:
+            if self.close > self.now_d_point.point.close:
                 self.now_d_point.point = Point()
 
 
@@ -172,16 +185,20 @@ class DStyleXingCheng(ParseStyle, MAMixin):
         需要随时判断是否已经失效
         :return:
         """
-        if self.d_points.all_d_points:
+        if self.d_points.all_effective_d_points:
             # 超过了最低的D类高点，则重新判断is ready，没超过一定不用重新判断
-            if self.now_k_data.close >= self.d_points.all_d_points[-1].point.high:
-                self.d_point = None
-                for i in self.d_points.all_d_points[-1::-1]:
+            plt.log.info(self.close, self.d_points.all_effective_d_points[-1].point.high)
+            if self.high >= self.d_points.all_effective_d_points[-1].point.close:
+                if self.close >= self.d_points.all_effective_d_points[-1].point.high:
+                    self.d_point = None
+
+                for i in self.d_points.all_effective_d_points[-1::-1]:
                     if i.status == DPoint.最高点未体现:
                         continue
-                    if self.now_k_data.high >= i.point.close and not self.now_k_data.close >= i.point.high:
+                    if self.high >= i.point.close and not self.close >= i.point.high:
                         self.is_ready = True
                         self.d_point = i
+
                 if self.d_point is None:
                     self.is_ready = False
         else:
@@ -217,9 +234,19 @@ class DStyleFaZhan(ParseStyle, MAMixin):
     p_上冲中 = 60
     p_上冲成功 = 70
 
+    PHASE_CHOICE = {
+        p_形成前: "p_形成前",
+        p_到位: "p_到位",
+        p_博大中: "p_博大中",
+        p_博大后期: "p_博大后期",
+        p_博大成功: "p_博大成功",
+        p_上冲中: "p_上冲中",
+        p_上冲成功: "p_上冲成功",
+    }
+
     BO_DA_QI_DIAN_SHUA_XIN = [p_到位, p_博大中, p_博大后期]
 
-    phase = Field(int)
+    phase = Field(int, choice=PHASE_CHOICE)
     is_hou_qi = Field(bool)
     dao_wei = Field(Point)  # 到位点
     bo_da_qi_dian = Field(Point)  # 博大起点
@@ -233,10 +260,7 @@ class DStyleFaZhan(ParseStyle, MAMixin):
         self.d_point = None
 
     def parse_phase(self):
-        if self.d_style_xing_cheng.phase == self.d_style_xing_cheng.p_到位:
-            if self.phase != self.p_形成前:
-                plt.log.warn("上冲结束前又发生D类到位，这种情况不应该存在")
-
+        if self.d_style_xing_cheng.phase == self.d_style_xing_cheng.p_到位 and self.phase == self.p_形成前:
             self.bo_da_qi_dian = Point()
             self.dao_wei = Point()
             self.phase = self.p_到位
@@ -282,7 +306,7 @@ class DStyleFaZhan(ParseStyle, MAMixin):
     def is_上冲成功(self):
         self.is_上冲失败()
         if self.phase in (self.p_到位, self.p_博大中, self.p_博大成功, self.p_博大后期, self.p_上冲中):
-            if self.close / self.bo_da_qi_dian.open() >= self.SHANG_CHONG_FU_DU:
+            if self.close / self.bo_da_qi_dian.open >= self.SHANG_CHONG_FU_DU:
                 self.phase = self.p_上冲成功
 
     def is_博大失败(self):
