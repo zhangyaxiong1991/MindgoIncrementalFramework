@@ -104,7 +104,7 @@ class QiangLiXingCheng(ParseStyle, MAMixin):
         if self.pre_phase == self.p_形成前:
             if self.qiang_li_gao_dian.phase == QLPoints.UP_MA10:
                 if self.up_break_mas([10, 20, 50, 200]):
-                    if self.now_k_data.close / self.qiang_li_gao_dian.start.price >= 1.18:
+                    if self.now_k_data.close / self.qiang_li_gao_dian.start.price >= 1.17:
                         self.phase = self.p_回调中
 
         elif self.pre_phase == self.p_回调中:
@@ -189,11 +189,7 @@ class QiangLiFaZhan(ParseStyle, MAMixin):
             else:
                 self.phase = self.p_阳到位
 
-        if self.phase in self.p_到位:
-            if self.close > self.zui_gao.close:
-                self.bo_da_cheng_gong = True
-
-        elif self.pre_phase in (self.p_阴到位, self.p_收阳前):
+        if self.pre_phase in (self.p_阴到位, self.p_收阳前):
             if self.向下跳空():
                 self.phase = self.p_到位前
                 self.yin_tiao_kong = True
@@ -221,6 +217,10 @@ class QiangLiFaZhan(ParseStyle, MAMixin):
                     self.yang_hou_yin = True
             else:
                 self.phase = self.p_收阳
+
+        if self.phase in self.p_到位:
+            if self.close > self.zui_gao.close:
+                self.bo_da_cheng_gong = True
 
     def parse_xing_cheng(self):
         if self.phase in [self.p_阳到位, self.p_阴到位]:

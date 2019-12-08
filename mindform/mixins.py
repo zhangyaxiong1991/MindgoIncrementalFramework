@@ -19,9 +19,7 @@ class MAMixin:
         return True
     
     def 阴加速(self):
-        if (self.now_k_data['close'] < self.now_k_data['open'] and
-            self.pre_k_data['close'] < self.pre_k_data['open'] and
-            (self.now_k_data['close'] / self.now_k_data['open']) > (self.pre_k_data['close'] / self.pre_k_data['open'])):
+        if (self.close < self.open and self.pre_close < self.pre_open and (self.open / self.close) > (self.pre_open / self.pre_close)):
             return True
         return False
 

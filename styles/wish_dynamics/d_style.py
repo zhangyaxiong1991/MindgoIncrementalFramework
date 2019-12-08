@@ -28,11 +28,12 @@ class DPoint(BaseDataType):
         收盘价未体现: "收盘价未体现",
         最高点未体现: "最高点未体现",
     }
-
-    def __init__(self, start, point, in_use):
+    
+    def __init__(self, start, point, mas=None):
         self.start = start
         self.point = point
         self.status = self.全体现
+        self.ma_status = {}
 
     def _check(self):
         assert isinstance(self.start, Point)
@@ -44,7 +45,7 @@ class DPoint(BaseDataType):
         self.point.handle_rights(all_history_data)
 
     def __str__(self):
-        return "起点: {} D类高点: {} 状态: {}".format(self.start.date.strftime("%Y-%m-%d"), self.point.date.strftime("%Y-%m-%d"), self.STATUS_CHOICE[self.status])
+        return "起点: {} D类高点: {} 状态: {} 均线状态: {}".format(self.start.date.strftime("%Y-%m-%d"), self.point.date.strftime("%Y-%m-%d"), self.STATUS_CHOICE[self.status], self.ma_status)
 
 
 class DPoints(ParseStyle, MAMixin):
@@ -52,18 +53,51 @@ class DPoints(ParseStyle, MAMixin):
     均线上 = 2
     均线中 = 0
     均线下 = -2
+    
+    向上完全脱离 = 2
+    向下完全脱离 = -2
+    
+    all_ma_status = [向上完全脱离, 向下完全脱离]
+    all_ma_count = [10, 20]
 
     phase = Field(int)
     start_point = Field(Point)
     now_d_point = Field(DPoint)
     all_d_points = Field(DPoint, many=True)
     is_ready = Field(bool)
+    all_d_points_ma_status = Field(int)  # 占位，用于计算所有d类高点的均线状态
 
     @property
     def all_effective_d_points(self):
         return [i for i in self.all_d_points if i.status == DPoint.全体现]
 
+    def all_ma_status_d_points(self, ma_count_list, ma_status_list, effective=True):
+        """
+        获取符合均线状态的d类高点
+        :param ma_count_list:
+        :param ma_status_list:
+        :param effective:
+        :return:
+        """
+        result = []
+        ma_status_list = set(ma_status_list)
+        all_d_points = self.all_d_points
+        if effective:
+            all_d_points = self.all_effective_d_points
+
+        for d_point in all_d_points:
+            hit = True
+            for ma_count in ma_count_list:
+                now_ma_status = d_point.ma_status.get(ma_count, set())
+                if ma_status_list.difference(now_ma_status):
+                    hit = False
+                    break
+            if hit:
+                result.append(d_point)
+        return result
+
     def init_first_row(self, k_data):
+        self.all_d_points_ma_status = 0
         self.phase = self.已形成
         self.all_d_points = []
         start = Point()
@@ -71,8 +105,37 @@ class DPoints(ParseStyle, MAMixin):
         self.now_d_point = DPoint(start, Point(), 0)
         self.start_point = start
         self.is_ready = True  # 是否已经运行到过200 50日线上
+    
+    def add_ma_status_to_all_d_points(self, ma_count, ma_status):
+        """
+        给所有的d类高点添加均线状态
+        :param ma_count:
+        :param ma_status:
+        :return:
+        """
+        for d_point in self.all_d_points:
+            d_point_ma_status = d_point.ma_status.setdefault(ma_count, set())
+            d_point_ma_status.add(ma_status)
+        
+    def parse_all_d_points_ma_status(self):
+        if self.all_d_points:
+            for ma_count in self.all_ma_count:
+                caculated_ma_status = self.all_d_points[-1].ma_status.get(ma_count, set())
+                uncaculated_ma_status = set(self.all_ma_status).difference(caculated_ma_status)
+                for ma_status in uncaculated_ma_status:
+                    if ma_status == self.向上完全脱离:
+                        if self.low <= self.MA(ma_count):
+                            continue
+                    if ma_status == self.向下完全脱离:
+                        if self.high >= self.MA(ma_count):
+                            continue
+                    self.add_ma_status_to_all_d_points(ma_count, ma_status)
 
     def parse_phase(self):
+        # 每天开始时，删除所有已经失效的d类高点
+        # https://github.com/zhangyaxiong1991/MindgoIncrementalFramework/issues/2#issue-534135672
+        self.all_d_points = self.all_effective_d_points
+
         # phase 用到is ready 提前计算
         if self.high > self.MA(200) and self.high > self.MA(50) and \
                 self.high > self.MA(10) or self.high > self.MA(20):
@@ -161,11 +224,13 @@ class DStyleXingCheng(ParseStyle, MAMixin):
     p_形成前 = 0
     p_已形成 = 1
     p_到位 = 2
+    p_到位后 = 3
 
     PHASE_CHOICE = {
         p_形成前: 'p_形成前',
         p_已形成: 'p_已形成',
-        p_到位: 'p_到位'
+        p_到位: 'p_到位',
+        p_到位后: 'p_到位后'
     }
 
     is_ready = Field(bool)  # 形成前标记是否可形成D类，即是否在D类高点区
@@ -185,14 +250,15 @@ class DStyleXingCheng(ParseStyle, MAMixin):
         需要随时判断是否已经失效
         :return:
         """
-        if self.d_points.all_effective_d_points:
+        # d类高点只有向下完全脱离过10、20日线后，才可用于生成D类高点
+        all_d_points = self.d_points.all_ma_status_d_points([10, 20], [self.d_points.向下完全脱离])
+        if all_d_points:
             # 超过了最低的D类高点，则重新判断is ready，没超过一定不用重新判断
-            plt.log.info(self.close, self.d_points.all_effective_d_points[-1].point.high)
-            if self.high >= self.d_points.all_effective_d_points[-1].point.close:
-                if self.close >= self.d_points.all_effective_d_points[-1].point.high:
+            if self.high >= all_d_points[-1].point.close:
+                if self.close >= all_d_points[-1].point.high:
                     self.d_point = None
 
-                for i in self.d_points.all_effective_d_points[-1::-1]:
+                for i in all_d_points[-1::-1]:
                     if i.status == DPoint.最高点未体现:
                         continue
                     if self.high >= i.point.close and not self.close >= i.point.high:
@@ -218,6 +284,8 @@ class DStyleXingCheng(ParseStyle, MAMixin):
                 self.phase = self.p_到位
             else:
                 self.phase = self.p_形成前
+        if self.qiang_li_xing_cheng.phase == self.qiang_li_xing_cheng.p_到位后:
+            self.phase = self.p_到位后
 
 
 class DStyleFaZhan(ParseStyle, MAMixin):
@@ -260,7 +328,9 @@ class DStyleFaZhan(ParseStyle, MAMixin):
         self.d_point = None
 
     def parse_phase(self):
-        if self.d_style_xing_cheng.phase == self.d_style_xing_cheng.p_到位 and self.phase == self.p_形成前:
+        if self.d_style_xing_cheng.phase == self.d_style_xing_cheng.p_到位 and self.d_style_xing_cheng.pre_phase != self.d_style_xing_cheng.p_到位:
+            if self.pre_phase != self.p_形成前:
+                plt.log.warn('D类形态前一天的状态是{}, 当前为“到位”， 这种情况不应存在'.format(self.PHASE_CHOICE[self.pre_phase]))
             self.bo_da_qi_dian = Point()
             self.dao_wei = Point()
             self.phase = self.p_到位
