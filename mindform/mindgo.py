@@ -26,6 +26,7 @@ class MindformLogger:
 
 
 class plt:
+    get_all_securities = get_all_securities
     log = MindformLogger
     get_price = get_price
     get_datetime = get_datetime

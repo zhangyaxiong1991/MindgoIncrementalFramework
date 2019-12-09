@@ -1,10 +1,12 @@
 # coding:utf-8
 
+import copy
 from collections import OrderedDict
 import datetime
 
 from mindform.style import Style, Field, BaseDataType
 from mindform.mindgo import plt
+from mindform.utils import MindFormDict
 
 
 class StyleManager(object):
@@ -20,6 +22,8 @@ class StyleManager(object):
 
         # 注册的形态
         self._styles = None
+        self._origin_styles = None
+        self._all_stocks_style = {}
 
         # 用户形态数据  {"个股代码": {"形态名": {"字段名": 字段值}}}
         self._style_data = {}
@@ -50,6 +54,12 @@ class StyleManager(object):
             now = self.td
         data = plt.get_price([stock], start_date.strftime("%Y%m%d"), now.strftime("%Y%m%d"), '1d', self.fileds)
         return data.get(stock)
+
+    def set_styles_depend_styles(self):
+        for style_name, style in self._styles.items():
+            for depend_style in style.__depends__:
+                depend_style_name = style.__depends__[depend_style].__name__
+                setattr(style, depend_style, self._styles[depend_style_name])
 
     def regist(self, styles):
         if not self._styles is None:
@@ -95,11 +105,12 @@ class StyleManager(object):
                     styles.add(i)
         self.cache_data_num = 2
         for style_name, style in self._styles.items():
-            for depend_style in style.__depends__:
-                depend_style_name = style.__depends__[depend_style].__name__
-                setattr(style, depend_style, self._styles[depend_style_name])
             if style.__catch_data_num__ > self.cache_data_num:
                 self.cache_data_num = style.__catch_data_num__
+
+        self.set_styles_depend_styles()
+
+        self._origin_styles = self._styles
 
     def get_all_stocks(self):
         """
@@ -211,6 +222,12 @@ class StyleManager(object):
         return self.last_two_days_data.get(stock, None)
 
     def set_now_stock(self, stock):
+        self._styles = self._all_stocks_style.get(stock, MindFormDict())
+        if not self._styles:
+            for style_name, origin_style in self._origin_styles.items():
+                self._styles[style_name] = origin_style.__class__()
+            self.set_styles_depend_styles()
+            self._all_stocks_style[stock] = self._styles
         self.now_stock = stock
         if not self.now_stock in self.stocks_cache_data:
             raise Exception("个股数据未缓存:{}".format(self.now_stock))
@@ -266,6 +283,9 @@ class StyleManager(object):
                 self.set_now_style(name)
                 self.set_depend_styles()
                 self.now_style.handle_data(stock, self.td, self.stocks_cache_data[stock].loc[self.td].to_dict())
+
+    def styles(self, stock):
+        return self._all_stocks_style.get(stock, None)
 
     def before_trading_start(self, account):
         pass
