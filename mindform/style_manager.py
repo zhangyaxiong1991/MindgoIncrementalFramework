@@ -200,6 +200,7 @@ class StyleManager(object):
                                 if missed_date:
                                     raise ValueError("some data missed when get all history data stock:{} missed date:{}"
                                                      .format(stock, missed_date))
+                                self.set_now_stock(stock)
                                 self._handle_rights(stock, stock_all_history_data)
                                 catch_data_first_data = self.stocks_cache_data[stock].index[0]
                                 stock_all_history_data.drop([i for i in stock_all_history_data.index if i < catch_data_first_data], inplace=True)
@@ -222,8 +223,9 @@ class StyleManager(object):
         return self.last_two_days_data.get(stock, None)
 
     def set_now_stock(self, stock):
-        self._styles = self._all_stocks_style.get(stock, MindFormDict())
+        self._styles = self._all_stocks_style.get(stock, None)
         if not self._styles:
+            self._styles = MindFormDict()
             for style_name, origin_style in self._origin_styles.items():
                 self._styles[style_name] = origin_style.__class__()
             self.set_styles_depend_styles()
