@@ -11,6 +11,7 @@ if __name__ == '__main__':
     target = r'D:\code\MindgoIncrementalFramework\policys\test01.py'
     finder.load_file(target)
     merge_file = """# coding:utf-8
+import functools
 import copy
 import datetime
 import traceback

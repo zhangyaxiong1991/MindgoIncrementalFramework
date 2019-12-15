@@ -14,6 +14,8 @@ def init(account):
     s.regist([DStyleFaZhan])
     account.styles = s
     plt.log.log_date = datetime.datetime.strptime('20160801', "%Y%m%d") - datetime.timedelta(days=20)
+    plt.log.log_level = ['info']
+    plt.log.log_stock = []
 
 
 def before_trading(account):
@@ -23,6 +25,7 @@ def before_trading(account):
 def after_trading(account):
     # plt.log.info("after_trading_end:{}".format(plt.get_datetime()))
     account.styles.after_trading_end(account)
+    plt.log.info('Dpoints: {}'.format(','.join([i.DStyleFaZhan.now_stock for i in account.styles._all_stocks_style.values() if i.DStyleFaZhan.phase == DStyleFaZhan.p_到位])))
 
 
 def handle_data(account, data):

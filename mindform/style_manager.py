@@ -155,6 +155,7 @@ class StyleManager(object):
         下载最近两天的数据,检查是否需要复权，如果需要则触发复权的逻辑，并且更新缓存的个股数据
         :return:
         """
+        plt.log.info("start down load")
         if self.last_two_days_data_refresh_date is None or not self.last_two_days_data_refresh_date == self.td:
             self.last_two_days_data_refresh_date = self.td
             if self.start_date > self.td:
@@ -194,7 +195,7 @@ class StyleManager(object):
                                                  .format(self.stocks_cache_data[stock].index[-1], last_two_days_data.index[0]))
                             if not self.stocks_cache_data[stock].iloc[-1]["close"] == last_two_days_data.iloc[0]["close"]:
                                 # 需要复权，先拿着所有历史数据去对让形态数据复权，然后裁剪后赋值给缓存数据
-                                # plt.log.info("{} 发生复权 \n缓存的最后一天数据：{}\n 下载的前一天数据：{}".format(stock, self.stocks_cache_data[stock].iloc[-1]["close"], last_two_days_data.iloc[0]["close"]))
+                                plt.log.info("{} 发生复权 \n缓存的最后一天数据：{}\n 下载的前一天数据：{}".format(stock, self.stocks_cache_data[stock].iloc[-1]["close"], last_two_days_data.iloc[0]["close"]))
                                 stock_all_history_data = self.get_stock_all_history_data(stock)
                                 missed_date = set(self.stocks_cache_data[stock].index) - set(stock_all_history_data.index)
                                 if missed_date:
@@ -212,6 +213,7 @@ class StyleManager(object):
                         if len(stock_catched_data) > self.cache_data_num:
                             # 缓存数据超长时删除第一行即可
                             stock_catched_data.drop(stock_catched_data.index[0], inplace=True)
+        plt.log.info("end down load")
 
     def get_stock_last_two_days_date(self, stock):
         """
@@ -231,6 +233,8 @@ class StyleManager(object):
             self.set_styles_depend_styles()
             self._all_stocks_style[stock] = self._styles
         self.now_stock = stock
+        for i in self._styles:
+            self._styles[i].now_stock = stock
         if not self.now_stock in self.stocks_cache_data:
             raise Exception("个股数据未缓存:{}".format(self.now_stock))
         self.stock_cache_data = self.stocks_cache_data[self.now_stock]
