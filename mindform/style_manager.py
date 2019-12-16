@@ -155,7 +155,7 @@ class StyleManager(object):
         下载最近两天的数据,检查是否需要复权，如果需要则触发复权的逻辑，并且更新缓存的个股数据
         :return:
         """
-        plt.log.info("start down load")
+        plt.log.info("start down load {}".format(datetime.datetime.now()))
         if self.last_two_days_data_refresh_date is None or not self.last_two_days_data_refresh_date == self.td:
             self.last_two_days_data_refresh_date = self.td
             if self.start_date > self.td:
@@ -213,7 +213,7 @@ class StyleManager(object):
                         if len(stock_catched_data) > self.cache_data_num:
                             # 缓存数据超长时删除第一行即可
                             stock_catched_data.drop(stock_catched_data.index[0], inplace=True)
-        plt.log.info("end down load")
+        plt.log.info("end down load {}".format(datetime.datetime.now()))
 
     def get_stock_last_two_days_date(self, stock):
         """
