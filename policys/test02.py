@@ -6,6 +6,10 @@ from normal_styles.box import Box
 from normal_styles.trend import Trend
 
 
+def get_stock_grade(stock_data, style_data):
+    pass
+
+
 def init(account):
     # 设置要交易的证券(600519.SH 贵州茅台)
     account.security = '000001.SH'
@@ -13,7 +17,7 @@ def init(account):
     account.stocks = ['000001.SH']
     account.styles = [Box(), Trend()]
     account.stock_data_range = {'1d': ('20190807', '20191223')}
-    account.stock_grade
+    account.stock_grade = {}
 
 
 def before_trading(account):
@@ -36,7 +40,7 @@ def after_trading(account):
             style_data['step_' + step] = step_style_data
             for style in account.styles:
                 style.set_data(step_stock_data, step_style_data)
-
+        account.stock_grade[stock] = get_stock_grade(stock_data, style_data)
 
 
 def handle_data(account, data):
