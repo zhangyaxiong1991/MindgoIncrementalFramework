@@ -21,6 +21,7 @@ class Box:
                 low_index = i
             if style_data.iloc[i][Trend.column_name] == Trend.下跌:
                 break
+            i += 1
         return low_index
 
     def _set_down_trend(self, style_data, down_start, up_start):
@@ -38,6 +39,7 @@ class Box:
                 high_index = i
             if style_data.iloc[i][Trend.column_name] == Trend.上涨:
                 break
+            i += 1
         return high_index
 
     def _set_up_trend(self, style_data, up_start, down_start):
@@ -51,14 +53,16 @@ class Box:
         style_data[Box.down_trend] = None
 
         now_status = None
-        up_start = None
-        down_start = None
+        up_start = 0
+        down_start = 0
         for i in range(len(style_data.index)):
+            log.info(now_status, up_start, down_start, i)
             if i == 0:
                 now_status = Box.平
                 continue
 
             if style_data.iloc[i][Trend.column_name] == Trend.上涨 and now_status != Box.上涨:
+                log.info('aaaaaaa')
                 up_start = self._get_up_start(stock_data, style_data, i)
                 if now_status == Box.下跌:
                     self._set_down_trend(style_data, down_start, up_start)
@@ -66,6 +70,7 @@ class Box:
                 now_status = Box.上涨
 
             if style_data.iloc[i][Trend.column_name] == Trend.下跌 and now_status != Box.下跌:
+                log.info('bbbbb')
                 down_start = self._get_down_start(stock_data, style_data, i)
                 if now_status == Box.上涨:
                     self._set_up_trend(style_data, up_start, down_start)
