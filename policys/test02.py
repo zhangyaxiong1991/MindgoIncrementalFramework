@@ -2,12 +2,12 @@
 
 import datetime
 
-from normal_styles.box import Box
+from normal_styles.box import Box, MergedBox
 from normal_styles.trend import Trend
 
 
 def get_stock_grade(stock_data, style_data):
-    pass
+    log.info(style_data)
 
 
 def init(account):
@@ -15,7 +15,7 @@ def init(account):
     account.security = '000001.SH'
     account.date = datetime.datetime.strptime('2019-12-20', '%Y-%m-%d')
     account.stocks = ['000001.SH']
-    account.styles = [Box(), Trend()]
+    account.styles = [Trend(), Box(), MergedBox]
     account.stock_data_range = {'1d': ('20190807', '20191223')}
     account.stock_grade = {}
 
@@ -35,7 +35,7 @@ def after_trading(account):
         style_data = {}
         for step in account.stock_data_range:
             step_stock_data = get_price([stock], account.stock_data_range[step][0], account.stock_data_range[step][1], step, ['close', 'open', 'low', 'high'])[stock]
-            step_style_data = pd.DataFrame([[]], index=stock_data.index)
+            step_style_data = pd.DataFrame([[]], index=step_stock_data.index)
             stock_data['step_' + step] = step_stock_data
             style_data['step_' + step] = step_style_data
             for style in account.styles:

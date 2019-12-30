@@ -1,7 +1,6 @@
 # coding:utf-8
 import os
 from deploy.modulefinder import ModuleFinder
-from deploy.distribute.map import Mindgo
 
 
 cookie = 'MDrVxdHH0Ns5OjpOb25lOjUwMDo0NzUzMzc4OTY6NywxMTExMTExMTExMSw0MDs0NCwxMSw0MDs2LDEsNDA7NSwxLDQwOzEsMSw0MDsyLDEsNDA7MywxLDQwOzUsMSw0MDs4LDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAxLDQwOjo6OjQ2NTMzNzg5NjoxNTc2NDIyNTA2Ojo6MTUzOTc2Mjc4MDo4NjQwMDowOjFiNDU5NGQzZmUwZWQ4ZGU0MjY3MmY4YmMxMDQ1OGMwNTpkZWZhdWx0XzM6MQ%3D%3D'
@@ -30,8 +29,8 @@ root_dir = root_dir.replace('/', os.sep)
 file_path = __file__.replace('/', os.sep)
 
 if __name__ == '__main__':
-    finder = ModuleFinder(encoding='utf-8', root_path=r'D:\code\MindgoIncrementalFramework')
-    target = r'D:\code\MindgoIncrementalFramework\policys\test01.py'
+    finder = ModuleFinder(encoding='utf-8', root_path=root_dir)
+    target = os.sep.join([root_dir, 'policys', 'test02.py'])
     finder.load_file(target)
     merge_file = """# coding:utf-8
 import functools
@@ -52,5 +51,6 @@ import pandas as pd
     with open(os.sep.join([root_dir, 'output', 'ot.py']), 'w', encoding='utf-8') as f:
         f.write(merge_file)
 
-    map_tool = Mindgo(policys, cookie, '2015-05-26', '2016-08-01')
-    map_tool.distribute(4000, merge_file)
+    # from deploy.distribute.map import Mindgo
+    # map_tool = Mindgo(policys, cookie, '2015-05-26', '2016-08-01')
+    # map_tool.distribute(4000, merge_file)
