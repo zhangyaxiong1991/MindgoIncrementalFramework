@@ -1,7 +1,9 @@
 # coding:utf-8
 
+from normal_styles.base import BaseStyle
 
-class Trend:
+
+class Trend(BaseStyle):
     column_name = 'k_trend'
     
     上涨 = '3'
@@ -12,7 +14,7 @@ class Trend:
     
     def set_data(self, stock_data, style_data):
         if Trend.column_name not in style_data.columns:
-            style_data[Trend.column_name] = Trend.平
+            self.add_column_data(style_data, Trend.column_name, Trend.平)
 
         for i in range(len(stock_data.index)):
             if i == 0:
