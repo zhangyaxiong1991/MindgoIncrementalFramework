@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import datetime
+import functools
 
 from normal_styles.box import Box, MergedBox
 from normal_styles.trend import Trend
@@ -30,12 +31,13 @@ def after_trading(account):
         log.info(now, now.date(), account.date.date())
         return
 
+    all_columns = functools.reduce(lambda x, y: x + y, [i.column_names for i in account.styles])
     for stock in account.stocks:
         stock_data = {}
         style_data = {}
         for step in account.stock_data_range:
             step_stock_data = get_price([stock], account.stock_data_range[step][0], account.stock_data_range[step][1], step, ['close', 'open', 'low', 'high'])[stock]
-            step_style_data = pd.DataFrame([[]], index=step_stock_data.index)
+            step_style_data = pd.DataFrame(index=step_stock_data.index, columns=all_columns)
             stock_data['step_' + step] = step_stock_data
             style_data['step_' + step] = step_style_data
             for style in account.styles:

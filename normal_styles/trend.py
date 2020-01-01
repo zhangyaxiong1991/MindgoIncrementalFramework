@@ -5,6 +5,7 @@ from normal_styles.base import BaseStyle
 
 class Trend(BaseStyle):
     column_name = 'k_trend'
+    column_names = [column_name]
     
     上涨 = '3'
     平上涨 = '1'

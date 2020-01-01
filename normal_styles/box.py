@@ -10,6 +10,7 @@ class Box(BaseStyle):
     down_trend_end = 'k_box_down_end'
     up_trend_start = 'k_box_up_start'
     up_trend_end = 'k_box_up_end'
+    column_names = [column_name, down_trend_start, down_trend_end, up_trend_start, up_trend_end]
 
     上涨 = 1
     下跌 = -1
@@ -32,7 +33,6 @@ class Box(BaseStyle):
         while i <= up_start:
             style_data.iloc[i][Box.down_trend_start] = down_start
             style_data.iloc[i][Box.down_trend_end] = up_start
-            log.info(style_data.iloc[i])
             i += 1
 
     def _get_down_start(self, stock_data, style_data, i):
@@ -50,11 +50,8 @@ class Box(BaseStyle):
     def _set_up_trend(self, style_data, up_start, down_start):
         i = up_start
         while i <= down_start:
-            log.info(up_start, down_start)
-            log.info(type(style_data.iloc[i][Box.up_trend_start]))
             style_data.iloc[i][Box.up_trend_start] = up_start
             style_data.iloc[i][Box.up_trend_end] = down_start
-            log.info(style_data.iloc[i])
             i += 1
 
     def set_data(self, stock_data, style_data):
@@ -73,7 +70,6 @@ class Box(BaseStyle):
                 continue
 
             if style_data.iloc[i][Trend.column_name] == Trend.上涨 and now_status != Box.上涨:
-                log.info('aaaaaaa')
                 up_start = self._get_up_start(stock_data, style_data, i)
                 if now_status == Box.下跌:
                     self._set_down_trend(style_data, down_start, up_start)
@@ -81,7 +77,6 @@ class Box(BaseStyle):
                 now_status = Box.上涨
 
             if style_data.iloc[i][Trend.column_name] == Trend.下跌 and now_status != Box.下跌:
-                log.info('bbbbb')
                 down_start = self._get_down_start(stock_data, style_data, i)
                 if now_status == Box.上涨:
                     self._set_up_trend(style_data, up_start, down_start)
@@ -89,12 +84,13 @@ class Box(BaseStyle):
                 now_status = Box.下跌
 
 
-class MergedBox():
+class MergedBox(BaseStyle):
     column_name = 'merged_box'
     down_merge_start = 'merged_box_down_merge_start'
     down_merge_end = 'merged_box_down_merge_end'
     up_merge_start = 'merged_box_up_merge_start'
     up_merge_end = 'merged_box_up_merge_end'
+    column_names = [column_name, down_merge_start, down_merge_end, up_merge_start, up_merge_end]
 
     def _set_down_merge_trend(self, style_data, down_merge_start, down_merge_end):
         i = down_merge_start
@@ -119,7 +115,10 @@ class MergedBox():
         times = 0
 
         for i in range(len(style_data.index)):
-            down_trend = style_data.iloc[i][MergedBox.down_merge_start], style_data.iloc[i][MergedBox.down_merge_end]
+            if style_data.iloc[i][MergedBox.down_merge_start] is None:
+                continue
+
+            down_trend = [style_data.iloc[i][MergedBox.down_merge_start], style_data.iloc[i][MergedBox.down_merge_end]]
             if down_trend[0] == -1:
                 continue
             if now_down_trend is None:
@@ -145,7 +144,10 @@ class MergedBox():
         times = 0
 
         for i in range(len(style_data.index)):
-            up_trend = style_data.iloc[i][MergedBox.up_merge_start], style_data.iloc[i][MergedBox.up_merge_end]
+            if style_data.iloc[i][MergedBox.up_merge_start] is None:
+                continue
+
+            up_trend = [style_data.iloc[i][MergedBox.up_merge_start], style_data.iloc[i][MergedBox.up_merge_end]]
             if now_up_trend is None:
                 now_up_trend = up_trend
             else:
