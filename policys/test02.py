@@ -39,6 +39,7 @@ def after_trading(account):
             stock_data['step_' + step] = step_stock_data
             style_data['step_' + step] = step_style_data
             for style in account.styles:
+                log.info('set style data: {}'.format(style.column_name))
                 style.set_data(step_stock_data, step_style_data)
         account.stock_grade[stock] = get_stock_grade(stock_data, style_data)
 
