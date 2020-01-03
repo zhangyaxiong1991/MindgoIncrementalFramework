@@ -3,8 +3,7 @@
 import datetime
 import functools
 
-from normal_styles.box import Box, MergedBox
-from normal_styles.trend import Trend
+from normal_styles.trend import KTrend, Trend, MergedTrend
 
 
 def get_stock_grade(stock_data, style_data):
@@ -16,7 +15,7 @@ def init(account):
     account.security = '000001.SH'
     account.date = datetime.datetime.strptime('2019-12-20', '%Y-%m-%d')
     account.stocks = ['000001.SH']
-    account.styles = [Trend(), Box(), MergedBox()]
+    account.styles = [KTrend(), Trend(), MergedTrend()]
     account.stock_data_range = {'1d': ('20190807', '20191223')}
     account.stock_grade = {}
 
