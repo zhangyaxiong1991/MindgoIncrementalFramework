@@ -5,12 +5,12 @@ from normal_styles.trend import MergedTrend
 
 
 class line:
-    def __ini__(self, stock_data, x1, y1, x2, y2):
+    def __ini__(self, x1, y1, x2, y2):
         self.a = (y2 - y1) / (x2 - x1)
         self.k = y1 - (self.a * x1)
 
 
-class BoxStyle():
+class BoxStyle:
     def __init__(self, stock_data, style_data, first_trend, second_trend):
         self._stock_data = stock_data
         self._style_data = style_data
@@ -26,6 +26,9 @@ class BoxStyle():
         last_high = Box.get_trend_high(self._all_trends[-1])
 
         return
+
+    def add_trend(self, trend):
+
 
     def handle_trend(self, trend):
         
