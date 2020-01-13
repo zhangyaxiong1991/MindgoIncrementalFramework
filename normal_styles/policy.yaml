@@ -1,0 +1,53 @@
+configs:
+  execute_date: "20190807"
+
+styles:
+  trend01:
+    type: common.trend.CommonTrend001
+    args:
+      start: "20190102"
+      end: "20190306"
+      direction: up
+      min_length: 25%
+
+  trend02:
+    type: common.trend.CommonTrend001
+    args:
+      start: "20190306"
+      end: "201900506"
+      direction: down
+      min_length: 25%
+
+  box01:
+    type: box
+    args:
+      start: "20190102"
+      end: "20190506"
+
+  break_up_down01:
+    type: break_up_down
+    args:
+      target: box01
+      start: "20190501"
+      end: "20190601"
+
+asserts:
+  assert001:
+    type: expression
+    args:
+      expression: (trend01.high - box01.high) / box01.high > 0.5
+  assert002:
+    type: expression
+    args:
+      expression: (break_up_down01.high - box01.high) / box01.high > 0.2
+  assert003:
+    type: expression
+    args:
+      expression: (break_up_down01.low - box01.high) / box01.high < 0.1
+
+grades:
+  grade01:
+    type: 顺序/累加
+    args:
+      expression: trend01.high - box01.high
+      wedgit: 0.5

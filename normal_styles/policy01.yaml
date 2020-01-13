@@ -1,0 +1,11 @@
+configs:
+  execute_date: "20190807"
+
+styles:
+  trend01:
+    type: common.trend.CommonTrend001
+    args:
+      start: "20190102"
+      end: "20190306"
+      direction: up
+      min_length: 25%

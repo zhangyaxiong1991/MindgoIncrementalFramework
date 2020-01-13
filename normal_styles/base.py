@@ -7,4 +7,4 @@ class BaseStyle:
             df.iloc[i][column_name] = value
 
     def get_column_names(self):
-        return "{}_{}".format(self.__class__.__name__, self.name)
+        return []

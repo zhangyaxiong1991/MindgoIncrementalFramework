@@ -28,6 +28,34 @@ root_dir = os.path.dirname(os.path.dirname(__file__))
 root_dir = root_dir.replace('/', os.sep)
 file_path = __file__.replace('/', os.sep)
 
+
+class MergeFiles:
+    @staticmethod
+    def merge_files(source, target):
+        finder = ModuleFinder(encoding='utf-8', root_path=root_dir)
+        finder.load_file(source)
+        merge_file = """
+# coding:utf-8
+import functools
+import copy
+import json
+import datetime
+import traceback
+from collections import OrderedDict, Sequence, Iterable
+
+import pandas as pd
+"""
+
+        for file in reversed(finder.paths):
+            with open(file, encoding='utf-8') as f:
+                for line in f:
+                    if line.startswith('import') or ' import ' in line:
+                        continue
+                    merge_file += line
+        with open(target, 'w', encoding='utf-8') as f:
+            f.write(merge_file)
+
+
 if __name__ == '__main__':
     finder = ModuleFinder(encoding='utf-8', root_path=root_dir)
     target = os.sep.join([root_dir, 'policys', 'test03.py'])
