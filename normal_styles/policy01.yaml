@@ -5,7 +5,23 @@ styles:
   trend01:
     type: common.trend.CommonTrend001
     args:
+      step: 1d
       start: "20190102"
       end: "20190306"
       direction: up
-      min_length: 25%
+      length: 0.25
+
+  box01:
+    type: common.box.CommonBox001
+    args:
+      step: 1d
+      start: "20190102"
+      end: "20190506"
+      low_points_range: [["20190102", "20190506"]]
+      high_points_range: [["20190102", "20190506"]]
+
+asserts:
+  assert001: ($trend01.high - $box01.high) / $box01.high > 0.5
+
+grades:
+  grade01: $trend01.high - $box01.high

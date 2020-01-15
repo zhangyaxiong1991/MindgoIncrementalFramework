@@ -6,5 +6,5 @@ class BaseStyle:
         for i in range(len(df.index)):
             df.iloc[i][column_name] = value
 
-    def get_column_names(self):
+    def get_all_columns(self):
         return []

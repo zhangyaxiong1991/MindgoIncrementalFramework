@@ -12,8 +12,8 @@ class CommonTrend001(BaseStyle):
         # 用户传参
         self.name = args['name']
         self.step = args['step']
-        self.start = args['start']
-        self.end = args['end']
+        self.start = pd._libs.tslib.Timestamp(args['start'])
+        self.end = pd._libs.tslib.Timestamp(args['end'])
         self.direction = args['direction']
         self.length = args['length']
 
@@ -25,26 +25,26 @@ class CommonTrend001(BaseStyle):
         :param result_data: 计算结果, 字典形式存储
         :return:
         """
-        style_result_data = {}
-        data = stock_data.loc[[x for x in stock_data.index if self.start <= x <= self.end]]
-        low_date = data['low'].argmin()
-        high_date = data['high'].argmax()
-        low = data['low'][low_date]
-        high = data['high'][high_date]
+        low_date = stock_data['low'].argmin()
+        high_date = stock_data['high'].argmax()
+        low = stock_data['low'][low_date]
+        high = stock_data['high'][high_date]
         if self.direction.upper == 'UP':
             if low >= high:
+                result_data['error'] = 'not up'
                 return
 
         if self.direction.upper == 'DOWN':
+            result_data['error'] = 'not down'
             if low <= high:
                 return
 
         if self.length:
             if not (high - low) / low >= self.length:
+                result_data['error'] = 'too short: {}'.format((high - low) / low)
                 return
 
-        style_result_data['high'] = high
-        style_result_data['low'] = low
-        style_result_data['high_date'] = high_date
-        style_result_data['low_date'] = low_date
-        result_data[self.name] = style_result_data
+        result_data['high'] = high
+        result_data['low'] = low
+        result_data['high_date'] = high_date
+        result_data['low_date'] = low_date
