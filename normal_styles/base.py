@@ -8,3 +8,17 @@ class BaseStyle:
 
     def get_all_columns(self):
         return []
+
+    @staticmethod
+    def get_min_index(ser, range):
+        indexs = [i for i in ser.index if range[0] <= i <= range[1]]
+        if len(indexs) == 0:
+            return None
+        return ser.loc[indexs].argmin()
+
+    @staticmethod
+    def get_max_index(ser, range):
+        indexs = [i for i in ser.index if range[0] <= i <= range[1]]
+        if len(indexs) == 0:
+            return None
+        return ser.loc[indexs].argmax()

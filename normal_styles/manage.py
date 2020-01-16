@@ -46,7 +46,7 @@ class PolicyManager:
 
 
 if __name__ == '__main__':
-    with open('policy01.yaml', 'r', encoding='utf-8') as f:
+    with open('policy02.yaml', 'r', encoding='utf-8') as f:
         policy = yaml.load(f.read())
         policy_content = PolicyManager.get_policy_instances(policy)
         print(policy_content)

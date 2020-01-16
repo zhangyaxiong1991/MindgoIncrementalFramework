@@ -21,12 +21,16 @@ class CommonBox001(BaseStyle):
     def set_data(self, stock_data, style_data, result_data):
         low_points = []
         for low_range in self.low_points_range:
-            low_point_date = stock_data.loc[[i for i in stock_data.index if low_range[0] <= i <= low_range[1]]]['low'].argmin()
+            low_point_date = self.get_min_index(stock_data['low'], low_range)
+            if low_point_date is None:
+                continue
             low_points.append([low_point_date, stock_data.loc[low_point_date]['low'], self.LOW])
 
         high_points = []
         for high_range in self.high_points_range:
-            high_point_date = stock_data.loc[[i for i in stock_data.index if high_range[0] <= i <= high_range[1]]]['high'].argmax()
+            high_point_date = self.get_max_index(stock_data["high"], high_range)
+            if high_point_date is None:
+                continue
             high_points.append([high_point_date, stock_data.loc[high_point_date]['high'], self.HIGH])
 
         points = low_points + high_points
