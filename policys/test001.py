@@ -11,11 +11,11 @@ import functools
 import json
 from mindform.utils import MindFormDict
 
-from normal_styles.common.box import CommonBox001
+from normal_styles.common.group import CommonGroup001
 
 def assert_result_data(result_data):
     assert_error = ''
-    if not result_data.box01.error == "": result_data["assert_error"] += "assert001 assert not pass"
+
     result_data['assert_error'] = assert_error
 
 def grade_result_data(result_data):
@@ -23,12 +23,25 @@ def grade_result_data(result_data):
 
     result_data['grade'] = grade
 
+def set_group_str(result_data, group_styles):
+    group_str = '|'.join([result_data[i]['group_str'] for i in group_styles])
+    result_data['group_str'] = group_str
+    
+
+def group_result_data(stocks_result_data):
+    groups = {}
+    for stock, result_data in stocks_result_data:
+        stocks = groups.setdefault(result_data.get('group_str', ''), [])
+        stocks.append(stock)
+    return groups
+        
+
 def init(account):
     # 设置要交易的证券(600519.SH 贵州茅台)
     account.security = '000001.SH'
     account.date = datetime.datetime.strptime('20200116', '%Y%m%d')
-    account.stocks = list(get_all_securities('stock', '20200116').index)
-    account.styles = [CommonBox001(**json.loads('{"step": "30m", "start": "201912300930", "end": "202001161500", "high_points_range": [["202001131400", "202001141430"], ["202001151400", "202001161030"]], "low_points_range": [["202001141430", "202001151400"], ["202001161030", "202001161500"]], "name": "box01"}'))]
+    account.stocks = list(get_all_securities('stock', '20200116').index[:10])
+    account.styles = [CommonGroup001(**json.loads('{"step": "30m", "start": "201912111500", "end": "202001161500", "high_points_range": [["201912161500", "201912181400"], ["201912191400", "201912201430"]], "low_points_range": [["201912181400", "201912201130"], ["201912201130", "201912241430"], ["201912271130", "201912301130"]], "name": "group01"}'))]
     account.style_data = {}
     account.result_data = []
     account.error_data = []
@@ -76,11 +89,14 @@ def after_trading(account):
         
         if not stock_result_data['assert_error']:
             grade_result_data(stock_result_data)
+            set_group_str(stock_result_data, ["group01"])
             account.result_data.append((stock, stock_result_data))
         else:
             account.error_data.append((stock, stock_result_data))
         account.style_data[stock] = stock_style_data
     account.result_data.sort(key=lambda x: x[1]['grade'])
+    account.groups = group_result_data(account.result_data)
+    log.info(account.groups)
     log.info(account.result_data[:10])
     log.info(account.result_data[-10:])
     log.info(account.error_data[:10])
@@ -88,5 +104,3 @@ def after_trading(account):
 def handle_data(account, data):
     # 获取证券过去20日的收盘价数据
     pass
-
-

@@ -2,6 +2,13 @@
 
 
 class BaseStyle:
+    LOW = -1
+    HIGH = 1
+
+    def __init__(self, **kwargs):
+        self.name = kwargs['name']
+        self.step = kwargs['step']
+
     def add_column_data(self, df, column_name, value):
         for i in range(len(df.index)):
             df.iloc[i][column_name] = value
@@ -22,3 +29,6 @@ class BaseStyle:
         if len(indexs) == 0:
             return None
         return ser.loc[indexs].argmax()
+
+    def group_str(self):
+        return "{}:{}-{}".format(self.__class__.__name__, self.start, self.end)

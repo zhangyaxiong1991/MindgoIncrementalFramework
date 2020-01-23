@@ -17,6 +17,7 @@ class PolicyManager:
         instance_def_items = []
         assert_items = []
         grade_items = []
+        group_style_names = []
         for key, items in policy.items():
             if key == 'configs':
                 execute_date = items['execute_date']
@@ -32,6 +33,10 @@ class PolicyManager:
                     grade_items.append('    grade += ({})'.format(grade_str.strip().replace('$', 'result_data.')))
                 continue
 
+            if key == 'groups':
+                for type_name in items:
+                    group_style_names.append(type_name)
+
             for style_name, style in items.items():
                 print(style_name)
                 style['args']['name'] = style_name
@@ -42,11 +47,11 @@ class PolicyManager:
         instance_def_items = ','.join(instance_def_items)
         assert_items = '\n'.join(assert_items)
         grade_items = '\n'.join(grade_items)
-        return normal_style_policy.format(instance_items=instance_def_items, execute_date=execute_date, import_items=import_items, dict_item="{}", assert_items=assert_items, grade_items=grade_items)
+        return normal_style_policy.format(instance_items=instance_def_items, execute_date=execute_date, import_items=import_items, dict_item="{}", assert_items=assert_items, grade_items=grade_items, group_style_names=str(json.dumps(group_style_names)))
 
 
 if __name__ == '__main__':
-    with open('policy02.yaml', 'r', encoding='utf-8') as f:
+    with open('policy03.yaml', 'r', encoding='utf-8') as f:
         policy = yaml.load(f.read())
         policy_content = PolicyManager.get_policy_instances(policy)
         print(policy_content)

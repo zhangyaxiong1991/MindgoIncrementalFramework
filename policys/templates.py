@@ -28,11 +28,24 @@ def grade_result_data(result_data):
 {grade_items}
     result_data['grade'] = grade
 
+def set_group_str(result_data, group_styles):
+    group_str = '|'.join([result_data[i]['group_str'] for i in group_styles])
+    result_data['group_str'] = group_str
+    
+
+def group_result_data(stocks_result_data):
+    groups = {dict_item}
+    for stock, result_data in stocks_result_data:
+        stocks = groups.setdefault(result_data.get('group_str', ''), [])
+        stocks.append(stock)
+    return groups
+        
+
 def init(account):
     # 设置要交易的证券(600519.SH 贵州茅台)
     account.security = '000001.SH'
     account.date = datetime.datetime.strptime('{execute_date}', '%Y%m%d')
-    account.stocks = list(get_all_securities('stock', '{execute_date}').index)
+    account.stocks = list(get_all_securities('stock', '{execute_date}').index[:10])
     account.styles = [{instance_items}]
     account.style_data = {dict_item}
     account.result_data = []
@@ -81,11 +94,15 @@ def after_trading(account):
         
         if not stock_result_data['assert_error']:
             grade_result_data(stock_result_data)
+            set_group_str(stock_result_data, {group_style_names})
             account.result_data.append((stock, stock_result_data))
         else:
             account.error_data.append((stock, stock_result_data))
         account.style_data[stock] = stock_style_data
     account.result_data.sort(key=lambda x: x[1]['grade'])
+    account.groups = group_result_data(account.result_data)
+    log.info(account.groups.keys())
+    log.info(account.groups)
     log.info(account.result_data[:10])
     log.info(account.result_data[-10:])
     log.info(account.error_data[:10])
@@ -93,6 +110,4 @@ def after_trading(account):
 def handle_data(account, data):
     # 获取证券过去20日的收盘价数据
     pass
-
-
 """

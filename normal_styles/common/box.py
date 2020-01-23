@@ -7,9 +7,6 @@ from normal_styles.base import BaseStyle
 
 
 class CommonBox001(BaseStyle):
-    LOW = -1
-    HIGH = 1
-
     def __init__(self, **kwargs):
         self.name = kwargs['name']
         self.step = kwargs['step']
